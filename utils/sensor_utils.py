@@ -20,16 +20,7 @@ def get_sensor_status_color(status):
     
     return status_colors.get(status.lower(), '#6c757d')  # Default to gray if status not found
 
-def get_battery_level_color(battery_level):
-    """
-    Returns the color based on battery level percentage
-    """
-    if battery_level >= 70:
-        return '#28a745'  # Green
-    elif battery_level >= 30:
-        return '#ffc107'  # Yellow
-    else:
-        return '#dc3545'  # Red
+# Battery level function removed as sensors are now plugged in, not battery-powered
 
 def generate_sample_data(sensor_type, start_time, end_time, interval_seconds=300):
     """

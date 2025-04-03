@@ -4,6 +4,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import time
+import random
 from utils.sensor_utils import get_sensor_status_color
 from utils.translation import get_translation
 from utils.data_manager import get_alerts_data, get_sensors_data, get_mattresses_data

@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import time
 import random
 from utils.mqtt_client import MQTTClient
-from utils.sensor_utils import get_sensor_status_color, get_battery_level_color, generate_sample_data
+from utils.sensor_utils import get_sensor_status_color, generate_sample_data
 from utils.visualization import create_gauge_chart, create_status_distribution_chart
 from utils.translation import get_translation, get_languages, set_language
 from utils.data_manager import get_sensors_data, get_mattresses_data, get_alerts_data
@@ -194,16 +194,8 @@ with right_col:
     # System health
     st.subheader(tr("system_health"))
     
-    # Battery levels
-    battery_levels = sensors_data['battery_level'].dropna()
-    avg_battery = battery_levels.mean() if not battery_levels.empty else 0
-    
-    fig = create_gauge_chart(
-        value=avg_battery,
-        title=tr("avg_battery_level"),
-        suffix="%"
-    )
-    st.plotly_chart(fig, use_container_width=True)
+    # Power status (replaces battery level since devices are plugged in)
+    st.success(tr("power_status_ok"))
     
     # Connection quality
     signal_levels = sensors_data['signal_strength'].dropna()

@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import numpy as np
 import time
-from utils.sensor_utils import get_sensor_status_color, get_battery_level_color, generate_sample_data
+from utils.sensor_utils import get_sensor_status_color, generate_sample_data
 from utils.visualization import create_time_series_chart, create_gauge_chart
 from utils.translation import get_translation
 from utils.data_manager import get_sensors_data
@@ -83,7 +83,6 @@ with col1:
     st.subheader(tr("sensor_details"))
     
     status_color = get_sensor_status_color(selected_sensor['status'])
-    battery_color = get_battery_level_color(selected_sensor['battery_level'])
     
     st.markdown(
         f"""
@@ -92,7 +91,7 @@ with col1:
             <p><strong>{tr('sensor_type')}:</strong> {selected_sensor['type']}</p>
             <p><strong>{tr('mattress_id')}:</strong> {selected_sensor['mattress_id']}</p>
             <p><strong>{tr('status')}:</strong> <span style="color:{status_color};font-weight:bold;">{selected_sensor['status'].upper()}</span></p>
-            <p><strong>{tr('battery_level')}:</strong> <span style="color:{battery_color};">{selected_sensor['battery_level']}%</span></p>
+            <p><strong>{tr('power_status')}:</strong> <span style="color:green;">Connected</span></p>
             <p><strong>{tr('signal_strength')}:</strong> {selected_sensor['signal_strength']}/10</p>
             <p><strong>{tr('firmware_version')}:</strong> {selected_sensor['firmware_version']}</p>
             <p><strong>{tr('installation_date')}:</strong> {selected_sensor['installation_date']}</p>
@@ -162,13 +161,8 @@ with col2:
     )
     st.plotly_chart(fig, use_container_width=True)
     
-    # Sensor battery level gauge
-    battery_fig = create_gauge_chart(
-        value=selected_sensor['battery_level'],
-        title=tr("battery_level"),
-        suffix="%"
-    )
-    st.plotly_chart(battery_fig, use_container_width=True)
+    # Power status
+    st.success(f"{tr('power_status')}: {tr('power_status_ok')}")
     
     # Signal strength gauge
     signal_fig = create_gauge_chart(
@@ -213,7 +207,7 @@ maintenance_history = pd.DataFrame({
     'type': [
         tr("firmware_update"),
         tr("calibration"),
-        tr("battery_replacement")
+        tr("maintenance_check")
     ],
     'technician': ['Tech1', 'Tech2', 'Tech1'],
     'notes': [

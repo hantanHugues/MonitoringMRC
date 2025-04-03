@@ -103,8 +103,8 @@ def get_translation(key, language='en'):
         
         # Sample activities for dashboard
         'activity_1': {
-            'en': 'Sensor SEN-201 battery low',
-            'fr': 'Batterie faible du capteur SEN-201'
+            'en': 'Sensor SEN-201 signal weak',
+            'fr': 'Signal faible du capteur SEN-201'
         },
         'activity_2': {
             'en': 'Maintenance completed on MAT-103',
@@ -124,9 +124,13 @@ def get_translation(key, language='en'):
         },
         
         # System health metrics
-        'avg_battery_level': {
-            'en': 'Average Battery Level',
-            'fr': 'Niveau de Batterie Moyen'
+        'power_status': {
+            'en': 'Power Status',
+            'fr': 'État d\'Alimentation'
+        },
+        'power_status_ok': {
+            'en': 'Connected to power supply',
+            'fr': 'Connecté à l\'alimentation'
         },
         'avg_signal_strength': {
             'en': 'Average Signal Strength',
@@ -174,10 +178,7 @@ def get_translation(key, language='en'):
             'en': 'Filter by Status',
             'fr': 'Filtrer par Statut'
         },
-        'filter_by_battery': {
-            'en': 'Filter by Battery Level',
-            'fr': 'Filtrer par Niveau de Batterie'
-        },
+# Removed battery filter as sensors are plugged in, not battery-powered
         'sensor_overview': {
             'en': 'Sensor Overview',
             'fr': 'Aperçu des Capteurs'
@@ -194,9 +195,9 @@ def get_translation(key, language='en'):
             'en': 'Sensors currently in error state',
             'fr': 'Capteurs actuellement en état d\'erreur'
         },
-        'battery_levels': {
-            'en': 'Battery Levels',
-            'fr': 'Niveaux de Batterie'
+        'power_status': {
+            'en': 'Power Status',
+            'fr': 'État d\'Alimentation'
         },
         'no_sensors_match_criteria': {
             'en': 'No sensors match the selected criteria',
@@ -284,9 +285,9 @@ def get_translation(key, language='en'):
             'en': 'Sensors on this Mattress',
             'fr': 'Capteurs sur ce Matelas'
         },
-        'battery_level': {
-            'en': 'Battery Level',
-            'fr': 'Niveau de Batterie'
+        'power_connection': {
+            'en': 'Power Connection',
+            'fr': 'Connexion d\'Alimentation'
         },
         'firmware_version': {
             'en': 'Firmware Version',
@@ -450,9 +451,9 @@ def get_translation(key, language='en'):
             'en': 'Calibration',
             'fr': 'Calibration'
         },
-        'battery_replacement': {
-            'en': 'Battery Replacement',
-            'fr': 'Remplacement de Batterie'
+        'maintenance_check': {
+            'en': 'Maintenance Check',
+            'fr': 'Vérification de Maintenance'
         },
         'regular_update': {
             'en': 'Regular update to latest version',

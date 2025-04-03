@@ -107,44 +107,7 @@ def create_status_distribution_chart(status_counts):
     
     return fig
 
-def create_battery_distribution_chart(sensors_data):
-    """
-    Creates a histogram showing the distribution of battery levels
-    
-    Parameters:
-    - sensors_data: DataFrame containing sensor data with 'battery_level' column
-    
-    Returns:
-    - Plotly figure object
-    """
-    # Create histogram bins
-    bins = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
-    
-    # Define colors for each bin
-    colors = ['#dc3545', '#dc3545', '#ffc107', '#ffc107', '#ffc107', 
-              '#ffc107', '#28a745', '#28a745', '#28a745', '#28a745']
-    
-    # Create the histogram
-    fig = px.histogram(
-        sensors_data,
-        x="battery_level",
-        nbins=10,
-        range_x=[0, 100],
-        labels={"battery_level": "Battery Level (%)", "count": "Number of Sensors"},
-        title="Battery Level Distribution"
-    )
-    
-    # Update the layout
-    fig.update_layout(
-        bargap=0.1,
-        height=350,
-        margin=dict(l=20, r=20, t=40, b=20)
-    )
-    
-    # Customize colors based on battery level ranges
-    fig.update_traces(marker_color=colors, marker_line_color='black', marker_line_width=1)
-    
-    return fig
+# Battery distribution chart function removed as sensors are now plugged in, not battery-powered
 
 def create_time_series_chart(data, title, sensor_type):
     """

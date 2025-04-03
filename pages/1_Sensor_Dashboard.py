@@ -4,8 +4,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import time
-from utils.sensor_utils import get_sensor_status_color, get_battery_level_color
-from utils.visualization import create_status_distribution_chart, create_battery_distribution_chart
+from utils.sensor_utils import get_sensor_status_color
+from utils.visualization import create_status_distribution_chart
 from utils.translation import get_translation
 from utils.data_manager import get_sensors_data, get_sensor_types
 
@@ -43,18 +43,10 @@ selected_statuses = st.sidebar.multiselect(
     default=['active', 'error']
 )
 
-# Filter by battery level
-min_battery, max_battery = st.sidebar.slider(
-    tr("filter_by_battery"),
-    0, 100, (0, 100)
-)
-
 # Apply filters
 filtered_sensors = sensors_data[
     (sensors_data['type'].isin(selected_types)) &
-    (sensors_data['status'].isin(selected_statuses)) &
-    (sensors_data['battery_level'] >= min_battery) &
-    (sensors_data['battery_level'] <= max_battery)
+    (sensors_data['status'].isin(selected_statuses))
 ]
 
 # Refresh button
@@ -90,12 +82,10 @@ with left_col:
     else:
         st.warning(tr("no_sensors_match_criteria"))
     
-    # Battery level distribution
+    # Power status (devices are plugged in)
     if not filtered_sensors.empty:
-        st.subheader(tr("battery_levels"))
-        
-        fig = create_battery_distribution_chart(filtered_sensors)
-        st.plotly_chart(fig, use_container_width=True)
+        st.subheader(tr("power_status"))
+        st.success(tr("power_status_ok"))
 
 with right_col:
     st.subheader(tr("sensor_types_distribution"))
@@ -151,24 +141,19 @@ if not filtered_sensors.empty:
         color = get_sensor_status_color(status)
         return f'<span style="color:{color};font-weight:bold;">{status.upper()}</span>'
     
-    def format_battery(battery):
-        color = get_battery_level_color(battery)
-        return f'<span style="color:{color};">{battery}%</span>'
-    
     # Format the dataframe for display
     display_df = filtered_sensors.copy()
     display_df['formatted_status'] = display_df['status'].apply(format_status)
-    display_df['formatted_battery'] = display_df['battery_level'].apply(format_battery)
     
     # Select columns to display
-    display_cols = ['id', 'name', 'type', 'formatted_status', 'formatted_battery', 'signal_strength', 'last_maintenance']
+    display_cols = ['id', 'name', 'type', 'formatted_status', 'signal_strength', 'last_maintenance']
     
     # Display as HTML to show colored status
     st.write(
         display_df[display_cols].to_html(
             escape=False, 
             index=False,
-            columns=['id', 'name', 'type', 'formatted_status', 'formatted_battery', 'signal_strength', 'last_maintenance'],
+            columns=['id', 'name', 'type', 'formatted_status', 'signal_strength', 'last_maintenance'],
             col_space=100
         ),
         unsafe_allow_html=True

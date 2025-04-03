@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 from datetime import datetime
 import time
 import random
-from utils.sensor_utils import get_sensor_status_color, get_battery_level_color
+from utils.sensor_utils import get_sensor_status_color
 from utils.translation import get_translation
 from utils.data_manager import get_sensors_data, get_mattresses_data
 
@@ -144,7 +144,7 @@ with col1:
                     width=1
                 )
             ),
-            text=f"{sensor.name} ({sensor.type})<br>Status: {sensor.status.upper()}<br>Battery: {sensor.battery_level}%",
+            text=f"{sensor.name} ({sensor.type})<br>Status: {sensor.status.upper()}<br>Power: Connected",
             hoverinfo='text',
             name=sensor.name
         ))
@@ -202,7 +202,6 @@ with col2:
     if not mattress_sensors.empty:
         for sensor in mattress_sensors.itertuples():
             status_color = get_sensor_status_color(sensor.status)
-            battery_color = get_battery_level_color(sensor.battery_level)
             
             with st.container():
                 st.markdown(
@@ -210,7 +209,7 @@ with col2:
                     <div style="border:1px solid #e0e0e0; border-radius:5px; padding:10px; margin-bottom:10px;">
                         <h4 style="margin-top:0;">{sensor.name} ({sensor.type})</h4>
                         <p><strong>{tr('status')}:</strong> <span style="color:{status_color};font-weight:bold;">{sensor.status.upper()}</span></p>
-                        <p><strong>{tr('battery_level')}:</strong> <span style="color:{battery_color};">{sensor.battery_level}%</span></p>
+                        <p><strong>{tr('power_status')}:</strong> <span style="color:green;">Connected</span></p>
                         <p><strong>{tr('signal_strength')}:</strong> {sensor.signal_strength}/10</p>
                         <p><strong>{tr('firmware_version')}:</strong> {sensor.firmware_version}</p>
                     </div>

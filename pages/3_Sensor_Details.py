@@ -261,7 +261,7 @@ with col1:
                                                     title=f"{selected_sensor['name']} - {tr('historical_readings')} (LIVE)",
                                                     sensor_type=selected_sensor['type']
                                                 )
-                                                st.plotly_chart(fig, use_container_width=True)
+                                                st.plotly_chart(fig, use_container_width=True, key=f"historical_live_chart_{datetime.now().timestamp()}")
                                             
                                             # Mettre à jour les statistiques
                                             with stats_container.container():
@@ -348,7 +348,7 @@ with col1:
                     '</div>',
                     unsafe_allow_html=True
                 )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, key=f"gauge_chart_{datetime.now().timestamp()}")
         
         return is_live_data, latest_value
 
@@ -392,7 +392,7 @@ with col1:
                 title=f"{selected_sensor['name']} - {tr('historical_readings')}",
                 sensor_type=selected_sensor['type']
             )
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True, key=f"historical_chart_{datetime.now().timestamp()}")
         
         # Statistics for the selected time period
         with stats_container.container():
@@ -428,7 +428,7 @@ with col2:
         suffix="/10",
         max_value=10
     )
-    st.plotly_chart(signal_fig, use_container_width=True)
+    st.plotly_chart(signal_fig, use_container_width=True, key=f"signal_chart_{datetime.now().timestamp()}")
     
     # Action buttons
     st.subheader(tr("sensor_actions"))

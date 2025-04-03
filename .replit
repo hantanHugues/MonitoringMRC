@@ -19,6 +19,10 @@ author = "agent"
 task = "workflow.run"
 args = "Streamlit Server"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "MQTT Broker"
+
 [[workflows.workflow]]
 name = "Streamlit Server"
 author = "agent"
@@ -33,6 +37,21 @@ task = "packager.installForAll"
 task = "shell.exec"
 args = "streamlit run app.py --server.port 5000"
 waitForPort = 5000
+
+[[workflows.workflow]]
+name = "MQTT Broker"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "mosquitto -c mosquitto.conf"
+waitForPort = 1883
 
 [[ports]]
 localPort = 5000

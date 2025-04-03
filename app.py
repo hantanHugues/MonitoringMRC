@@ -5,7 +5,9 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import time
 import random
+import logging
 from utils.mqtt_client import MQTTClient
+from utils.direct_simulator import initialize_direct_simulator, get_direct_simulator
 from utils.sensor_utils import get_sensor_status_color, generate_sample_data
 from utils.visualization import create_gauge_chart, create_status_distribution_chart
 from utils.translation import get_translation, get_languages, set_language
@@ -29,6 +31,18 @@ if 'mqtt_client' not in st.session_state:
 if 'last_update' not in st.session_state:
     st.session_state['last_update'] = datetime.now()
 
+# Initialize direct simulator for simulating sensor data
+# This will be used to get sensor data for mattress 1 (MAT-101)
+if 'direct_simulator' not in st.session_state:
+    try:
+        logging.info("Initializing direct simulator...")
+        direct_simulator = initialize_direct_simulator()
+        st.session_state['direct_simulator'] = direct_simulator
+        logging.info("Direct simulator initialized successfully")
+    except Exception as e:
+        logging.error(f"Failed to initialize direct simulator: {e}")
+        st.session_state['direct_simulator'] = None
+
 # Sidebar with hospital information and settings
 with st.sidebar:
     st.image("https://images.unsplash.com/photo-1516574187841-cb9cc2ca948b", width=300)
@@ -48,25 +62,29 @@ with st.sidebar:
             set_language(code)
             st.rerun()
     
-    # MQTT Connection (placeholder for future implementation)
-    st.markdown("### MQTT Connection")
+    # Direct Simulator Connection
+    st.markdown("### Sensor Simulator")
     if not st.session_state.connected:
-        if st.button("Connect to MQTT Broker"):
-            # This would be replaced with actual MQTT connection code later
+        if st.button("Start Sensor Simulator"):
+            # Start the direct simulator
             st.session_state.connected = True
-            st.session_state.mqtt_client = MQTTClient(client_id="medimat_monitor", host="localhost", port=1883)
-            st.success("Connected to MQTT broker")
+            if 'direct_simulator' in st.session_state and st.session_state.direct_simulator:
+                st.session_state.direct_simulator.start()
+                st.success("Sensor simulator started")
+            else:
+                st.warning("Failed to start simulator. Try refreshing the page.")
             time.sleep(1)
             st.rerun()
     else:
-        if st.button("Disconnect"):
+        if st.button("Stop Simulator"):
             st.session_state.connected = False
-            st.session_state.mqtt_client = None
-            st.info("Disconnected from MQTT broker")
+            if 'direct_simulator' in st.session_state and st.session_state.direct_simulator:
+                st.session_state.direct_simulator.stop()
+            st.info("Sensor simulator stopped")
             time.sleep(1)
             st.rerun()
         
-        st.success("✅ Connected to MQTT broker")
+        st.success("✅ Sensor simulator running")
     
     st.markdown("---")
     st.markdown("👨‍💻 User: Medical Technician")

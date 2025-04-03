@@ -1,12 +1,16 @@
 import pandas as pd
 from datetime import datetime, timedelta
 import random
+import streamlit as st
+import logging
+from utils.direct_simulator import get_direct_simulator, initialize_direct_simulator
 
 def get_sensors_data():
     """
-    Returns sample sensor data for demonstration
+    Returns sensor data, combining MQTT data for mattress 1 and simulated data for others
     
-    In a real application, this would fetch data from a database
+    For sensors on mattress 1 (MAT-101), data is sourced from MQTT broker when available
+    For other mattresses, data is simulated
     """
     # Sensor types
     sensor_types = ['pressure', 'temperature', 'humidity', 'movement']
@@ -14,6 +18,17 @@ def get_sensors_data():
     # Status options
     status_options = ['active', 'inactive', 'maintenance', 'error']
     status_weights = [0.7, 0.1, 0.1, 0.1]  # Weights for random selection
+    
+    # Initialize direct simulator if not already done
+    try:
+        # Try to initialize direct simulator if not already present
+        if 'direct_simulator' not in st.session_state:
+            direct_simulator = initialize_direct_simulator()
+        else:
+            direct_simulator = st.session_state['direct_simulator']
+    except Exception as e:
+        logging.error(f"Erreur lors de l'initialisation du simulateur direct: {e}")
+        direct_simulator = None
     
     # Generate random sensor data
     sensors = []
@@ -51,6 +66,27 @@ def get_sensors_data():
         else:
             mattress_id = None
         
+        # For sensors on mattress 1 (first 3 sensors), check if we have simulated data
+        is_mqtt_updated = False
+        if mattress_id == "MAT-101" and i <= 3:
+            # Get direct simulator from session state if available
+            direct_simulator = None
+            if 'direct_simulator' in st.session_state:
+                direct_simulator = st.session_state['direct_simulator']
+                
+            if direct_simulator:
+                simulated_data = direct_simulator.get_latest_data(sensor_id)
+                if simulated_data:
+                    # Update with simulated data 
+                    is_mqtt_updated = True
+                    # Force the sensor to be active when receiving simulated data
+                    status = 'active'
+                    # Ensure signal strength is good
+                    signal_strength = random.randint(8, 10)
+                    
+                    # Add a log to show we're using simulated data
+                    logging.info(f"Using simulated data for sensor {sensor_id} on mattress {mattress_id}")
+        
         sensors.append({
             'id': sensor_id,
             'name': f"{sensor_type.capitalize()} Sensor {i}",
@@ -61,7 +97,8 @@ def get_sensors_data():
             'firmware_version': firmware_version,
             'installation_date': installation_date,
             'last_maintenance': last_maintenance,
-            'mattress_id': mattress_id
+            'mattress_id': mattress_id,
+            'is_mqtt_updated': is_mqtt_updated
         })
     
     return pd.DataFrame(sensors)
@@ -216,3 +253,72 @@ def get_sensor_types():
     Returns the list of available sensor types
     """
     return ['pressure', 'temperature', 'humidity', 'movement']
+
+def get_sensor_readings(sensor_id, sensor_type, timeframe='day'):
+    """
+    Get sensor readings for a specific sensor, using MQTT data when available
+    
+    Parameters:
+    - sensor_id: ID of the sensor
+    - sensor_type: Type of the sensor
+    - timeframe: 'hour', 'day', 'week', or 'month'
+    
+    Returns:
+    - DataFrame with timestamp and value columns
+    """
+    from utils.sensor_utils import generate_sample_data
+    from datetime import datetime, timedelta
+    
+    # Define the time range based on the timeframe
+    end_time = datetime.now()
+    if timeframe == 'hour':
+        start_time = end_time - timedelta(hours=1)
+        interval_seconds = 60  # 1 reading per minute
+    elif timeframe == 'day':
+        start_time = end_time - timedelta(days=1)
+        interval_seconds = 300  # 5 minutes
+    elif timeframe == 'week':
+        start_time = end_time - timedelta(weeks=1)
+        interval_seconds = 3600  # 1 hour
+    elif timeframe == 'month':
+        start_time = end_time - timedelta(days=30)
+        interval_seconds = 7200  # 2 hours
+    else:
+        start_time = end_time - timedelta(days=1)
+        interval_seconds = 300
+    
+    # Check if sensor is on mattress 1 and using MQTT
+    mattress_id = None
+    sensors_df = get_sensors_data()
+    if not sensors_df.empty:
+        sensor_row = sensors_df[sensors_df['id'] == sensor_id]
+        if not sensor_row.empty:
+            mattress_id = sensor_row.iloc[0]['mattress_id']
+            is_mqtt_updated = sensor_row.iloc[0].get('is_mqtt_updated', False)
+            
+            # For Mattress 1 sensors with simulated data, use the simulated value for current reading
+            if mattress_id == "MAT-101" and is_mqtt_updated:
+                # Try to get the latest simulated data for this sensor
+                try:
+                    if 'direct_simulator' in st.session_state:
+                        direct_simulator = st.session_state['direct_simulator']
+                        simulated_data = direct_simulator.get_latest_data(sensor_id)
+                        if simulated_data:
+                            value = simulated_data.get('value')
+                            logging.info(f"Using simulated data for sensor {sensor_id}: {value}")
+                            
+                            # Generate sample data for historical values, but incorporate simulated value for latest
+                            df = generate_sample_data(sensor_type, start_time, end_time, interval_seconds)
+                            
+                            # Replace the latest value with simulated data
+                            if not df.empty:
+                                # Add random variation to simulate slightly changing values
+                                factor = random.uniform(0.95, 1.05) 
+                                df.iloc[-1, df.columns.get_loc('value')] = value * factor
+                            
+                            return df
+                except Exception as e:
+                    logging.error(f"Error getting simulated data for sensor {sensor_id}: {e}")
+    
+    # For all other sensors, generate sample data
+    return generate_sample_data(sensor_type, start_time, end_time, interval_seconds)

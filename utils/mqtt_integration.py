@@ -55,6 +55,15 @@ class MQTTIntegration:
             "capteur/creatine": "creatine"
         }
         
+        # Map des types de capteurs pour la compatibilité
+        self.sensor_type_map = {
+            "temperature": "temperature",
+            "humidity": "humidity",
+            "debit": "flow",
+            "poul": "pulse",
+            "creatine": "creatinine"
+        }
+        
         # Configure logging
         logging.basicConfig(level=logging.INFO)
         self.logger = logging.getLogger("mqtt_integration")

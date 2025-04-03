@@ -1,0 +1,86 @@
+Documentation Technique : Interface de Monitoring pour Capteurs de Matelas Médicaux
+Architecture Générale
+L'application est construite avec Streamlit, une bibliothèque Python permettant de créer rapidement des applications web interactives orientées données. L'architecture suit un modèle multi-pages avec une structure modulaire.
+
+Technologies utilisées
+Frontend : Streamlit 1.32+
+Backend : Python 3.11
+Base de données : PostgreSQL (via SQLAlchemy)
+Communication temps réel : MQTT
+Visualisation des données : Plotly
+Manipulation de données : Pandas
+Structure de l'Application
+Page d'accueil (app.py)
+Vue d'ensemble du système
+Métriques principales (nombre de matelas, capteurs actifs, alertes)
+Sélecteur de langue (français/anglais) en haut à droite
+Informations de l'hôpital et de l'utilisateur dans la barre latérale
+Pages Fonctionnelles
+Tableau de Bord des Capteurs (pages/1_Sensor_Dashboard.py) :
+
+Vue d'ensemble de tous les capteurs et leurs statuts
+Graphiques récapitulatifs (statut, niveau de batterie)
+Filtres par type et statut de capteur
+Vue Matelas (pages/1_5_Mattress_View.py) :
+
+Visualisation des matelas et leurs capteurs associés
+Cartographie visuelle des capteurs sur chaque matelas
+Données du patient associé au matelas
+Détails du Capteur (pages/2_Sensor_Details.py) :
+
+Informations détaillées sur un capteur spécifique
+Graphiques temporels des mesures
+Historique des événements et alertes
+Statut de maintenance et calibration
+Configuration (pages/3_Configuration.py) :
+
+Paramètres des capteurs
+Configuration des seuils d'alerte
+Gestion des associations capteur-matelas
+Maintenance (pages/4_Maintenance.py) :
+
+Planification des tâches de maintenance
+Historique des calibrations
+Mise à jour des firmwares
+Vue calendrier des tâches planifiées
+Alertes et Journaux (pages/5_Alerts_Logs.py) :
+
+Journal des alertes actives et historiques
+Filtrage par priorité et type
+Système d'acquittement et résolution des alertes
+Paramètres API & MQTT (pages/6_API_MQTT_Settings.py) :
+
+Configuration des connexions API externes
+Configuration du broker MQTT
+Test de connexion et simulation de données
+Gestion des seuils d'alerte globaux
+Fonctionnalités Transversales
+Internationalisation (utils/translation.py)
+Support multilingue (français et anglais)
+Traduction des interfaces via dictionnaires
+Sélecteur de langue interactif avec drapeaux
+Conservation de la langue dans les sessions utilisateur
+Gestion des Capteurs (utils/sensor_utils.py)
+Fonctions utilitaires pour le traitement des données capteurs
+Calcul des statuts (batterie, maintenance, calibration)
+Codes couleur et icônes pour représentation visuelle
+Formatage des horodatages et valeurs
+Visualisation (utils/visualization.py)
+Graphiques interactifs pour les données temporelles
+Diagrammes pour statuts et alertes
+Représentation visuelle des matelas et capteurs
+Personnalisation des couleurs selon les statuts
+MQTT (mqtt_manager.py)
+Connexion au broker MQTT pour données temps réel
+Traitement des messages entrants
+Publication de commandes aux capteurs
+Stockage temporaire des dernières valeurs reçues
+Base de Données (database.py, db_manager.py)
+Modèles de données pour patients, matelas, capteurs, mesures, événements, alertes
+Fonctions CRUD pour interagir avec la base de données
+Migrations avec Alembic
+Conversion des modèles en DataFrames pour l'interface
+Configuration
+Fichier .streamlit/config.toml pour paramètres serveur et thème
+Configuration visuelle (couleurs, polices)
+Configuration des ports (5000 pour accès externe)

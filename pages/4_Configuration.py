@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
-from utils.sensor_utils import get_sensor_status_color, get_battery_level_color
+from utils.sensor_utils import get_sensor_status_color
 from utils.translation import get_translation
 from utils.data_manager import get_sensors_data, get_mattresses_data, get_sensor_types
 
@@ -222,25 +222,16 @@ elif config_option == tr("alert_thresholds"):
     st.subheader(tr("alert_priority_settings"))
     
     with st.form(key="alert_thresholds_form"):
-        # Battery level thresholds
-        st.markdown(f"### {tr('battery_level_thresholds')}")
+        # Power connection thresholds
+        st.markdown(f"### {tr('power_connection_thresholds')}")
         
-        battery_warning = st.slider(
-            tr("battery_warning_threshold"),
-            min_value=10,
-            max_value=50,
-            value=30,
-            step=5,
-            help=tr("battery_warning_help")
-        )
-        
-        battery_critical = st.slider(
-            tr("battery_critical_threshold"),
-            min_value=5,
-            max_value=battery_warning - 5,
-            value=15,
-            step=5,
-            help=tr("battery_critical_help")
+        connection_check = st.slider(
+            tr("power_check_frequency"),
+            min_value=1,
+            max_value=30,
+            value=5,
+            step=1,
+            help=tr("power_check_frequency_help")
         )
         
         # Signal strength thresholds
@@ -316,7 +307,7 @@ elif config_option == tr("alert_thresholds"):
             st.session_state['config_changes'].append({
                 'timestamp': datetime.now(),
                 'type': 'alert_thresholds',
-                'parameters': f"Battery: {battery_warning}%/{battery_critical}%, Signal: {signal_warning}/{signal_critical}, Data Age: {data_age_warning}min/{data_age_critical}min"
+                'parameters': f"Power Check: {connection_check}min, Signal: {signal_warning}/{signal_critical}, Data Age: {data_age_warning}min/{data_age_critical}min"
             })
             
             st.success(tr("alert_thresholds_saved"))
@@ -347,7 +338,7 @@ elif config_option == tr("mattress_sensor_assignment"):
                 cols = st.columns([3, 2, 2, 2, 1])
                 cols[0].markdown(f"**{sensor.name}** ({sensor.type})")
                 cols[1].markdown(f"{tr('status')}: <span style='color:{status_color};font-weight:bold;'>{sensor.status.upper()}</span>", unsafe_allow_html=True)
-                cols[2].markdown(f"{tr('battery')}: {sensor.battery_level}%")
+                cols[2].markdown(f"{tr('power_connection')}: {'Connected' if sensor.power_connection else 'Disconnected'}")
                 cols[3].markdown(f"{tr('firmware')}: {sensor.firmware_version}")
                 if cols[4].button(tr("remove"), key=f"remove_{sensor.id}"):
                     # In a real application, this would update the database to unassign the sensor

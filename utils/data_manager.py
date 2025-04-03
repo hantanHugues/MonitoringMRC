@@ -66,26 +66,44 @@ def get_sensors_data():
         else:
             mattress_id = None
         
-        # For sensors on mattress 1 (first 3 sensors), check if we have simulated data
+        # For sensors on mattress 1 (first 3 sensors), check if we have MQTT data or simulated data
         is_mqtt_updated = False
         if mattress_id == "MAT-101" and i <= 3:
-            # Get direct simulator from session state if available
-            direct_simulator = None
-            if 'direct_simulator' in st.session_state:
-                direct_simulator = st.session_state['direct_simulator']
-                
-            if direct_simulator:
-                simulated_data = direct_simulator.get_latest_data(sensor_id)
-                if simulated_data:
-                    # Update with simulated data 
-                    is_mqtt_updated = True
-                    # Force the sensor to be active when receiving simulated data
-                    status = 'active'
-                    # Ensure signal strength is good
-                    signal_strength = random.randint(8, 10)
+            # 1. First try to get data from MQTT broker (highest priority)
+            if 'mqtt_integration' in st.session_state:
+                mqtt_integration = st.session_state['mqtt_integration']
+                if mqtt_integration and hasattr(mqtt_integration, 'connected') and mqtt_integration.connected:
+                    mqtt_data = mqtt_integration.get_latest_data(sensor_id)
                     
-                    # Add a log to show we're using simulated data
-                    logging.info(f"Using simulated data for sensor {sensor_id} on mattress {mattress_id}")
+                    if mqtt_data and isinstance(mqtt_data, dict) and 'value' in mqtt_data:
+                        # Update with MQTT data
+                        is_mqtt_updated = True
+                        # Force the sensor to be active when receiving MQTT data
+                        status = 'active'
+                        # Ensure signal strength is good
+                        signal_strength = random.randint(8, 10)
+                        
+                        # Add a log to show we're using MQTT data
+                        logging.info(f"Using MQTT data for sensor {sensor_id} on mattress {mattress_id}")
+                        
+            # 2. If no MQTT data, try the direct simulator (fallback)
+            if not is_mqtt_updated:
+                direct_simulator = None
+                if 'direct_simulator' in st.session_state:
+                    direct_simulator = st.session_state['direct_simulator']
+                    
+                if direct_simulator:
+                    simulated_data = direct_simulator.get_latest_data(sensor_id)
+                    if simulated_data:
+                        # Update with simulated data 
+                        is_mqtt_updated = True
+                        # Force the sensor to be active when receiving simulated data
+                        status = 'active'
+                        # Ensure signal strength is good
+                        signal_strength = random.randint(8, 10)
+                        
+                        # Add a log to show we're using simulated data
+                        logging.info(f"Using simulated data for sensor {sensor_id} on mattress {mattress_id}")
         
         sensors.append({
             'id': sensor_id,
@@ -296,9 +314,44 @@ def get_sensor_readings(sensor_id, sensor_type, timeframe='day'):
             mattress_id = sensor_row.iloc[0]['mattress_id']
             is_mqtt_updated = sensor_row.iloc[0].get('is_mqtt_updated', False)
             
-            # For Mattress 1 sensors with simulated data, use the simulated value for current reading
+            # For Mattress 1 sensors with MQTT or simulated data, use the real-time values
             if mattress_id == "MAT-101" and is_mqtt_updated:
-                # Try to get the latest simulated data for this sensor
+                # 1. First try to get MQTT data (highest priority)
+                try:
+                    if 'mqtt_integration' in st.session_state:
+                        mqtt_integration = st.session_state['mqtt_integration']
+                        if mqtt_integration and mqtt_integration.connected:
+                            # Get the historical data from MQTT if available
+                            mqtt_history = mqtt_integration.get_latest_data(sensor_id, history=True)
+                            
+                            if mqtt_history and isinstance(mqtt_history, list) and len(mqtt_history) > 0:
+                                # Convert MQTT history to DataFrame
+                                history_data = []
+                                for entry in mqtt_history:
+                                    try:
+                                        # Parse timestamp string to datetime object if it's a string
+                                        timestamp = entry.get('timestamp')
+                                        if isinstance(timestamp, str):
+                                            timestamp = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
+                                        
+                                        # Add to history data
+                                        history_data.append({
+                                            'timestamp': timestamp,
+                                            'value': entry.get('value', 0)
+                                        })
+                                    except Exception as e:
+                                        logging.error(f"Error parsing MQTT history entry: {e}")
+                                
+                                if history_data:
+                                    # Create DataFrame from MQTT history and sort by timestamp
+                                    mqtt_df = pd.DataFrame(history_data)
+                                    mqtt_df = mqtt_df.sort_values('timestamp')
+                                    logging.info(f"Using MQTT history data for sensor {sensor_id} with {len(mqtt_df)} values")
+                                    return mqtt_df
+                except Exception as e:
+                    logging.error(f"Error getting MQTT data for sensor {sensor_id}: {e}")
+                
+                # 2. Fallback to simulated data if MQTT data is not available
                 try:
                     if 'direct_simulator' in st.session_state:
                         direct_simulator = st.session_state['direct_simulator']

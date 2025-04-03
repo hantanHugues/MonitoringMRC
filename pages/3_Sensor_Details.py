@@ -163,16 +163,21 @@ with col1:
         unsafe_allow_html=True
     )
     
-    # Tableau des dernières valeurs MQTT reçues
+    # Tableau des dernières valeurs MQTT reçues en temps réel
     live_data_found = False
+    
     if selected_sensor['mattress_id'] == "MAT-101" and 'mqtt_integration' in st.session_state:
         mqtt_integration = st.session_state['mqtt_integration']
         if mqtt_integration and mqtt_integration.connected:
             st.subheader("Dernières valeurs MQTT (Temps réel)")
             
+            # Container pour le tableau avec auto-refresh
+            mqtt_table_container = st.empty()
+            
             # Obtenir toutes les données MQTT pour ce matelas
             all_mqtt_data = mqtt_integration.get_latest_data()
             
+            # Vérifier si les données sont disponibles
             if all_mqtt_data:
                 # Créer un DataFrame à partir des données MQTT
                 mqtt_rows = []
@@ -189,10 +194,33 @@ with col1:
                 if mqtt_rows:
                     live_data_found = True
                     mqtt_df = pd.DataFrame(mqtt_rows)
-                    st.dataframe(mqtt_df, use_container_width=True)
+                    mqtt_table_container.dataframe(mqtt_df, use_container_width=True)
                     
-                    # Ajouter un indicateur de mise à jour automatique
-                    st.info(f"Données mises à jour toutes les 5 secondes. Cliquez sur le bouton 'Refresh data' pour actualiser manuellement.")
+                    # Afficher l'historique des données pour le capteur sélectionné
+                    st.subheader(f"Historique des données pour {selected_sensor['name']}")
+                    
+                    # Obtenir l'historique des données pour ce capteur
+                    sensor_history = mqtt_integration.get_latest_data(selected_sensor_id, history=True)
+                    
+                    if sensor_history and isinstance(sensor_history, list):
+                        # Créer un DataFrame à partir de l'historique
+                        history_rows = []
+                        for data in reversed(sensor_history):  # Afficher les plus récentes en premier
+                            if data and isinstance(data, dict):
+                                history_rows.append({
+                                    "Horodatage": data.get('timestamp', ''),
+                                    "Valeur": data.get('value', 0),
+                                    "Unité": data.get('unit', '')
+                                })
+                        
+                        if history_rows:
+                            history_df = pd.DataFrame(history_rows)
+                            st.dataframe(history_df, use_container_width=True)
+                            
+                            # Info sur l'auto-rafraîchissement
+                            st.info(f"Les données sont mises à jour en temps réel toutes les 2 secondes. L'historique conserve les 20 dernières valeurs.")
+                    else:
+                        st.warning(f"Aucun historique disponible pour le capteur {selected_sensor['name']}")
             
             if not live_data_found:
                 st.warning("Aucune donnée MQTT en temps réel disponible pour ce matelas.")

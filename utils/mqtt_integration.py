@@ -152,8 +152,8 @@ class MQTTIntegration:
             # Mapping du type de capteur si nécessaire
             mapped_type = self.sensor_type_map.get(sensor_type, sensor_type)
             
-            # Stocker les données
-            self.latest_data[sensor_id] = {
+            # Stocker les données actuelles
+            current_data = {
                 'id': sensor_id,
                 'name': sensor_name or f"Capteur {sensor_id}",
                 'type': mapped_type,
@@ -165,28 +165,63 @@ class MQTTIntegration:
                 'status': status
             }
             
+            # Créer ou mettre à jour l'historique des données pour ce capteur
+            if sensor_id not in self.latest_data:
+                self.latest_data[sensor_id] = {
+                    'current': current_data,
+                    'history': [current_data]
+                }
+            else:
+                # Mettre à jour les données courantes
+                self.latest_data[sensor_id]['current'] = current_data
+                
+                # Ajouter à l'historique (limité à 20 entrées)
+                history = self.latest_data[sensor_id]['history']
+                history.append(current_data)
+                
+                # Garder seulement les 20 dernières entrées
+                if len(history) > 20:
+                    self.latest_data[sensor_id]['history'] = history[-20:]
+            
             self.logger.info(f"Données mises à jour pour le capteur {sensor_id} du matelas {mattress_id}: {value} {unit}")
                 
         except Exception as e:
             self.logger.error(f"Erreur lors du traitement du message: {e}")
     
-    def get_latest_data(self, sensor_id=None):
+    def get_latest_data(self, sensor_id=None, history=False):
         """
         Retourne les dernières données reçues des capteurs
         
         Parameters:
         - sensor_id: Optionnel, filtre par ID du capteur
+        - history: Si True, renvoie l'historique des données, sinon uniquement les données actuelles
         
         Returns:
-        - Dictionnaire des dernières données
+        - Dictionnaire des dernières données ou liste de l'historique
         """
         if sensor_id is None:
-            return self.latest_data
+            # Si on veut l'historique pour tous les capteurs
+            if history:
+                result = {}
+                for sensor_id, data in self.latest_data.items():
+                    result[sensor_id] = data.get('history', [])
+                return result
+            else:
+                # Sinon, retourne seulement les données actuelles pour tous les capteurs
+                result = {}
+                for sensor_id, data in self.latest_data.items():
+                    result[sensor_id] = data.get('current', {})
+                return result
         
+        # Si le capteur n'existe pas
         if sensor_id not in self.latest_data:
             return {}
         
-        return self.latest_data[sensor_id]
+        # Si on veut l'historique pour un capteur spécifique
+        if history:
+            return self.latest_data[sensor_id].get('history', [])
+        else:
+            return self.latest_data[sensor_id].get('current', {})
 
 # Création d'une instance globale pour l'intégration MQTT
 mqtt_integration = None

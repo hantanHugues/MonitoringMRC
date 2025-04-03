@@ -69,7 +69,7 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python mqtt_live_test.py"
+args = "python mqtt_live_test.py -i 2"
 
 [[ports]]
 localPort = 1883

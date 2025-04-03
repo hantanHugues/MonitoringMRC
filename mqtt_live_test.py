@@ -171,7 +171,7 @@ def main():
     
     # Configurer le client MQTT
     client_id = f"mqtt-test-{random.randint(0, 1000)}"
-    client = mqtt.Client(client_id=client_id, callback_api_version=mqtt.CallbackAPIVersion.VERSION1)
+    client = mqtt.Client(client_id=client_id)
     
     # Configurer les callbacks
     client.on_connect = on_connect

@@ -20,7 +20,7 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger(__name__)
 
 # Configuration MQTT
-broker = "127.0.0.1"
+broker = "0.0.0.0"
 port = 1883
 client_id = f"sensor-simulator-{random.randint(0, 1000)}"
 keep_alive = 60

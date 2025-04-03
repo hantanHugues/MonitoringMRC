@@ -22,7 +22,7 @@ logging.basicConfig(
 )
 
 # Configuration MQTT par défaut
-DEFAULT_BROKER_HOST = "localhost"
+DEFAULT_BROKER_HOST = "0.0.0.0"
 DEFAULT_BROKER_PORT = 1883
 DEFAULT_MATTRESS_ID = "MAT-101"
 DEFAULT_TOPIC_PREFIX = "hospital/mattress/"

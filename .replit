@@ -9,7 +9,7 @@ deploymentTarget = "autoscale"
 run = ["sh", "-c", "run dev"]
 
 [workflows]
-runButton = "Project"
+runButton = "MQTT Setup"
 
 [[workflows.workflow]]
 name = "Project"
@@ -67,6 +67,23 @@ agentRequireRestartOnSave = false
 
 [[workflows.workflow.tasks]]
 task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python mqtt_live_test.py -i 2"
+
+[[workflows.workflow]]
+name = "MQTT Setup"
+author = 41118900
+mode = "parallel"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "streamlit run app.py --server.port 5000"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "mosquitto -c mosquitto.conf"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"

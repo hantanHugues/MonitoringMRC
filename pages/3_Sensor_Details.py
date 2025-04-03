@@ -78,8 +78,26 @@ else:  # By Mattress
         format_func=lambda x: mattress_options[x]
     )
 
-    # Filter sensors by selected mattress
-    filtered_sensors = sensors_data[sensors_data['mattress_id'] == selected_mattress_id]
+    # Si c'est le matelas MAT-101, on montre uniquement les capteurs MQTT
+    if selected_mattress_id == "MAT-101" and 'mqtt_integration' in st.session_state:
+        mqtt_integration = st.session_state['mqtt_integration']
+        if mqtt_integration and mqtt_integration.connected:
+            mqtt_data = mqtt_integration.get_latest_data()
+            # Créer une liste des capteurs MQTT disponibles
+            mqtt_sensors = []
+            for sensor_id, data in mqtt_data.items():
+                if isinstance(data, dict) and 'type' in data:
+                    mqtt_sensors.append({
+                        'id': sensor_id,
+                        'name': data.get('name', f"Capteur {sensor_id}"),
+                        'type': data.get('type'),
+                        'mattress_id': selected_mattress_id
+                    })
+            # Convertir en DataFrame pour la compatibilité
+            filtered_sensors = pd.DataFrame(mqtt_sensors)
+    else:
+        # Pour les autres matelas, filtrer normalement
+        filtered_sensors = sensors_data[sensors_data['mattress_id'] == selected_mattress_id]
 
     # Create a dropdown for the filtered sensors
     sensor_options = {s.id: f"{s.name} ({s.type})" for s in filtered_sensors.itertuples()}
@@ -386,22 +404,22 @@ with col1:
     if not historical_data.empty and not (live_data_found and selected_sensor['mattress_id'] == "MAT-101"):
         with historical_chart_container.container():
             st.subheader(f"{tr('historical_data')} - Temps réel")
-            
+
             # Create real-time line chart
             fig = go.Figure()
-            
+
             # Get MQTT data if available
             mqtt_data = None
             if 'mqtt_integration' in st.session_state:
                 mqtt_integration = st.session_state['mqtt_integration']
                 if mqtt_integration and mqtt_integration.connected:
                     mqtt_data = mqtt_integration.get_latest_data(selected_sensor_id, history=True)
-            
+
             if mqtt_data and isinstance(mqtt_data, list):
                 # Convert MQTT timestamps to datetime
                 x_data = [datetime.strptime(d['timestamp'], "%Y-%m-%d %H:%M:%S") for d in mqtt_data]
                 y_data = [d['value'] for d in mqtt_data]
-                
+
                 # Add the real-time data trace
                 fig.add_trace(go.Scatter(
                     x=x_data,
@@ -423,7 +441,7 @@ with col1:
                         )
                     )
                 ))
-                
+
                 # Update layout with proper axes labels and grid
                 fig.update_layout(
                     title=f"{selected_sensor['name']} - Mesures en temps réel",
@@ -445,7 +463,7 @@ with col1:
                     height=500,
                     showlegend=True
                 )
-                
+
                 st.plotly_chart(fig, use_container_width=True, key=f"live_chart_{datetime.now().timestamp()}")
             else:
                 # Fallback to historical data if no MQTT data
@@ -457,7 +475,7 @@ with col1:
                     line=dict(color='#2E86C1', width=2),
                     marker=dict(size=8, color='#2E86C1', symbol='circle')
                 ))
-                
+
                 fig.update_layout(
                     title=f"{selected_sensor['name']} - Mesures historiques",
                     xaxis_title='Temps',
@@ -469,10 +487,10 @@ with col1:
                     xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E5E5E5'),
                     yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E5E5E5')
                 )
-                
+
                 st.plotly_chart(fig, use_container_width=True, key=f"historical_chart_{datetime.now().timestamp()}")
 
-        # Statistics for the selected time period
+        # Statistics and historical data
         with stats_container.container():
             if 'value' in historical_data.columns:
                 st.subheader(tr("statistics_for_period"))
@@ -482,6 +500,27 @@ with col1:
                 stats_col2.metric(tr("max_value"), f"{historical_data['value'].max():.2f}")
                 stats_col3.metric(tr("avg_value"), f"{historical_data['value'].mean():.2f}")
                 stats_col4.metric(tr("std_dev"), f"{historical_data['value'].std():.2f}")
+
+                # Afficher l'historique des 20 dernières valeurs
+                st.subheader("Historique des 20 dernières valeurs")
+                if selected_sensor['mattress_id'] == "MAT-101" and 'mqtt_integration' in st.session_state:
+                    mqtt_integration = st.session_state['mqtt_integration']
+                    if mqtt_integration and mqtt_integration.connected:
+                        history_data = mqtt_integration.get_latest_data(selected_sensor_id, history=True)
+                        if history_data:
+                            history_df = pd.DataFrame(history_data)
+                            history_df = history_df[['timestamp', 'value', 'unit']]
+                            history_df.columns = ['Horodatage', 'Valeur', 'Unité']
+                            st.dataframe(history_df, use_container_width=True)
+                        else:
+                            st.info("Aucun historique disponible pour ce capteur")
+                else:
+                    # Pour les autres capteurs, afficher les données historiques normales
+                    history_df = historical_data.tail(20).copy()
+                    history_df['timestamp'] = history_df.index
+                    history_df = history_df[['timestamp', 'value']]
+                    history_df.columns = ['Horodatage', 'Valeur']
+                    st.dataframe(history_df, use_container_width=True)
     elif not live_data_found or selected_sensor['mattress_id'] != "MAT-101":
         with historical_chart_container.container():
             st.warning(tr("no_historical_data_available"))

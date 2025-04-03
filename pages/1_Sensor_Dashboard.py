@@ -63,7 +63,7 @@ def update_dashboard():
                 status_counts.columns = ['status', 'count']
                 
                 fig = create_status_distribution_chart(status_counts)
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, use_container_width=True, key=f"status_chart_{datetime.now().timestamp()}")
             else:
                 st.warning(tr("no_sensors_match_criteria"))
             
@@ -90,7 +90,7 @@ def update_dashboard():
                 fig.update_traces(textposition='inside', textinfo='percent+label')
                 fig.update_layout(margin=dict(l=20, r=20, t=30, b=20))
                 
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, use_container_width=True, key=f"pie_chart_{datetime.now().timestamp()}")
             
             # Signal strength overview
             st.subheader(tr("signal_strength"))
@@ -115,7 +115,7 @@ def update_dashboard():
                 )
                 fig.update_layout(margin=dict(l=20, r=20, t=30, b=20))
                 
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, use_container_width=True, key=f"signal_chart_{datetime.now().timestamp()}")
         
         # Display the sensor table
         st.subheader(tr("sensors_list"))
@@ -151,6 +151,7 @@ def update_dashboard():
                 data=csv,
                 file_name=f"sensors_data_{datetime.now().strftime('%Y%m%d')}.csv",
                 mime="text/csv",
+                key=f"download_csv_{datetime.now().timestamp()}"
             )
         else:
             st.warning(tr("no_sensors_match_criteria"))

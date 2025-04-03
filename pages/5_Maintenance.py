@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-from utils.sensor_utils import get_sensor_status_color, get_battery_level_color
+from utils.sensor_utils import get_sensor_status_color
 from utils.translation import get_translation
 from utils.data_manager import get_sensors_data, get_mattresses_data
 
@@ -74,7 +74,7 @@ if maintenance_option == tr("maintenance_schedule"):
         
         # Select maintenance type
         if asset_type == tr("sensor"):
-            maintenance_types = [tr("calibration"), tr("battery_replacement"), tr("firmware_update"), tr("physical_inspection")]
+            maintenance_types = [tr("calibration"), tr("power_connection_check"), tr("firmware_update"), tr("physical_inspection")]
         else:
             maintenance_types = [tr("cleaning"), tr("sensor_replacement"), tr("physical_inspection")]
         
@@ -502,8 +502,8 @@ elif maintenance_option == tr("historical_maintenance"):
     # Filter by maintenance type
     maintenance_type_filter = st.sidebar.multiselect(
         tr("maintenance_type"),
-        options=[tr("calibration"), tr("battery_replacement"), tr("firmware_update"), tr("physical_inspection"), tr("cleaning"), tr("sensor_replacement")],
-        default=[tr("calibration"), tr("battery_replacement"), tr("firmware_update")]
+        options=[tr("calibration"), tr("power_connection_check"), tr("firmware_update"), tr("physical_inspection"), tr("cleaning"), tr("sensor_replacement")],
+        default=[tr("calibration"), tr("power_connection_check"), tr("firmware_update")]
     )
     
     if st.session_state['maintenance_tasks']:

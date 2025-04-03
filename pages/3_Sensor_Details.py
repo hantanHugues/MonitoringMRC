@@ -387,31 +387,42 @@ with col1:
         with historical_chart_container.container():
             st.subheader(f"{tr('historical_data')} - {time_range}")
 
-            # Create scatter plot
-            fig = px.scatter(
-                historical_data,
+            # Create line and scatter plot
+            fig = go.Figure()
+            
+            # Add scatter points
+            fig.add_trace(go.Scatter(
                 x=historical_data.index,
-                y='value',
-                title=f"{selected_sensor['name']} - {tr('historical_readings')}",
-                labels={'index': 'Temps', 'value': f"Valeur ({selected_sensor['type']})"}
-            )
-
-            # Add line connecting points
-            fig.add_trace(
-                go.Scatter(
-                    x=historical_data.index,
-                    y=historical_data['value'],
-                    mode='lines',
-                    line=dict(color='rgba(0,100,255,0.5)'),
-                    name='Tendance'
+                y=historical_data['value'],
+                mode='markers+lines',
+                name='Mesures',
+                line=dict(color='#2E86C1', width=2),
+                marker=dict(
+                    size=8,
+                    color='#2E86C1',
+                    symbol='circle'
                 )
-            )
+            ))
 
             # Update layout
             fig.update_layout(
-                showlegend=True,
+                title=f"{selected_sensor['name']} - {tr('historical_readings')}",
+                xaxis_title='Temps',
+                yaxis_title=f"Valeur ({selected_sensor['type']})",
                 hovermode='x unified',
-                height=400
+                height=500,
+                showlegend=True,
+                plot_bgcolor='white',
+                xaxis=dict(
+                    showgrid=True,
+                    gridwidth=1,
+                    gridcolor='#E5E5E5'
+                ),
+                yaxis=dict(
+                    showgrid=True,
+                    gridwidth=1,
+                    gridcolor='#E5E5E5'
+                )
             )
             st.plotly_chart(fig, use_container_width=True, key=f"historical_chart_{datetime.now().timestamp()}")
 

@@ -40,20 +40,19 @@ class MQTTIntegration:
         # Topics MQTT pour les capteurs
         # Par défaut, on écoute les topics standard pour notre système
         self.topics = topics or [
-            "capteur/temperature",
-            "capteur/humidite",
-            "capteur/debit_urinaire",
-            "capteur/poul",
-            "capteur/creatine"
+            "hospital/mattress/MAT-101/SEN-201",
+            "hospital/mattress/MAT-101/SEN-202", 
+            "hospital/mattress/MAT-101/SEN-203",
+            "hospital/mattress/MAT-101/SEN-204",
+            "hospital/mattress/MAT-101/SEN-205"
         ]
         
         # Map du type de capteur vers le type dans notre système
         self.sensor_type_map = {
+            "pressure": "pressure",
             "temperature": "temperature",
-            "humidite": "humidity",
-            "debit_urinaire": "pressure",
-            "poul": "movement",
-            "creatine": "movement"
+            "humidity": "humidity",
+            "movement": "movement"
         }
         
         # Configure logging
@@ -119,65 +118,54 @@ class MQTTIntegration:
         """
         try:
             # Afficher le message reçu pour le débogage
-            self.logger.info(f"Message reçu sur le topic {msg.topic}: {msg.payload}")
+            self.logger.info(f"Message reçu sur le topic {msg.topic}")
             
-            # Mapper les capteurs aux IDs de notre système
-            sensor_map = {
-                "capteur/temperature": "SEN-202",     # Capteur de température -> SEN-202
-                "capteur/humidite": "SEN-203",        # Capteur d'humidité -> SEN-203  
-                "capteur/debit_urinaire": "SEN-201",  # Capteur de débit urinaire -> SEN-201 (pression)
-                "capteur/poul": "SEN-204",            # Capteur de pouls -> SEN-204 (mouvement)
-                "capteur/creatine": "SEN-205"         # Capteur de créatine -> SEN-205 (autre mouvement)
-            }
-            
-            # Extraire le type de capteur du topic
-            topic = msg.topic
-            
-            # Affecter un ID de capteur basé sur le topic
-            sensor_id = sensor_map.get(topic)
-            if not sensor_id:
-                self.logger.warning(f"Topic non reconnu: {topic}")
+            # Extraire l'ID du capteur à partir du topic
+            topic_parts = msg.topic.split('/')
+            if len(topic_parts) >= 4:
+                sensor_id = topic_parts[3]  # Format: 'hospital/mattress/MAT-101/SEN-201'
+                mattress_id = topic_parts[2]
+            else:
+                self.logger.warning(f"Format de topic non reconnu: {msg.topic}")
                 return
                 
-            # Tous les capteurs appartiennent au matelas 1
-            mattress_id = "MAT-101"
-            
-            # Déterminer le type de capteur basé sur le topic
-            sensor_type_from_topic = topic.split('/')[1]  # Exemple: 'capteur/temperature' -> 'temperature'
-            
             try:
                 # Tenter de décoder le payload JSON
                 payload = json.loads(msg.payload.decode())
-                value = payload.get("valeur")
-                esp32_id = payload.get("esp32_id")
+                
+                # Les champs attendus dans notre format MQTT
+                value = payload.get("value")
+                sensor_type = payload.get("type")
+                sensor_name = payload.get("name")
+                unit = payload.get("unit", "")
                 timestamp = payload.get("timestamp")
-            except (json.JSONDecodeError, AttributeError):
-                # Si ce n'est pas du JSON, essayer de traiter comme une valeur brute
-                try:
-                    value = float(msg.payload.decode().strip())
-                    esp32_id = None
-                    timestamp = None
-                except ValueError:
-                    self.logger.warning(f"Impossible de parser le payload: {msg.payload}")
+                status = payload.get("status", "active")
+                
+                if value is None or sensor_type is None:
+                    self.logger.warning(f"Payload incomplet: {payload}")
                     return
+                    
+            except (json.JSONDecodeError, AttributeError) as e:
+                self.logger.warning(f"Impossible de parser le payload JSON: {e}")
+                return
             
-            # Mapping du type de capteur
-            mapped_type = self.sensor_type_map.get(sensor_type_from_topic, sensor_type_from_topic)
+            # Mapping du type de capteur si nécessaire
+            mapped_type = self.sensor_type_map.get(sensor_type, sensor_type)
             
             # Stocker les données
-            if sensor_id not in self.latest_data:
-                self.latest_data[sensor_id] = {}
-            
             self.latest_data[sensor_id] = {
-                'timestamp': timestamp or datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'id': sensor_id,
+                'name': sensor_name or f"Capteur {sensor_id}",
                 'type': mapped_type,
                 'value': value,
-                'topic': topic,
+                'unit': unit,
+                'timestamp': timestamp,
+                'topic': msg.topic,
                 'mattress_id': mattress_id,
-                'esp32_id': esp32_id
+                'status': status
             }
             
-            self.logger.info(f"Données mises à jour pour le capteur {sensor_id} du matelas {mattress_id}: {value} ({mapped_type})")
+            self.logger.info(f"Données mises à jour pour le capteur {sensor_id} du matelas {mattress_id}: {value} {unit}")
                 
         except Exception as e:
             self.logger.error(f"Erreur lors du traitement du message: {e}")

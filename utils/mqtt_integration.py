@@ -6,39 +6,54 @@ import logging
 import streamlit as st
 from datetime import datetime
 
-# Configuration du client MQTT pour l'intégration avec le simulateur externe
+# Configuration du client MQTT pour l'intégration avec le broker externe
 class MQTTIntegration:
     def __init__(self, 
                  host="localhost", 
                  port=1883,
+                 username=None,
+                 password=None,
                  topics=None):
         """
-        Initialise le client MQTT pour l'intégration avec le simulateur externe
+        Initialise le client MQTT pour l'intégration avec le broker externe
         
         Parameters:
         - host: Adresse du broker MQTT 
         - port: Port du broker MQTT
+        - username: Nom d'utilisateur pour l'authentification (optionnel)
+        - password: Mot de passe pour l'authentification (optionnel)
         - topics: Liste des topics à écouter
         """
         self.host = host
         self.port = port
+        self.username = username
+        self.password = password
         self.client_id = f"medimat_integration_{int(time.time())}"
         self.client = mqtt.Client(client_id=self.client_id)
         self.connected = False
         self.latest_data = {}
         
-        # Topics MQTT pour les capteurs - format matelas/mattress_id/sensor_id
-        # Pour le simulateur, on utilise les topics hospital/mattress/MAT-101/SEN-20X
+        # Configurer l'authentification si nécessaire
+        if username and password:
+            self.client.username_pw_set(username, password)
+        
+        # Topics MQTT pour les capteurs
+        # Par défaut, on écoute les topics standard pour notre système
         self.topics = topics or [
-            "hospital/mattress/+/+"  # Subscribe à tous les topics des capteurs
+            "capteur/temperature",
+            "capteur/humidite",
+            "capteur/debit_urinaire",
+            "capteur/poul",
+            "capteur/creatine"
         ]
         
         # Map du type de capteur vers le type dans notre système
         self.sensor_type_map = {
             "temperature": "temperature",
-            "humidity": "humidity",
-            "pressure": "pressure",
-            "movement": "movement"
+            "humidite": "humidity",
+            "debit_urinaire": "pressure",
+            "poul": "movement",
+            "creatine": "movement"
         }
         
         # Configure logging
@@ -106,45 +121,64 @@ class MQTTIntegration:
             # Afficher le message reçu pour le débogage
             self.logger.info(f"Message reçu sur le topic {msg.topic}: {msg.payload}")
             
-            # Format du topic attendu: hospital/mattress/MAT-101/SEN-201
-            topic_parts = msg.topic.split('/')
-            if len(topic_parts) < 4:
-                self.logger.warning(f"Format de topic invalide: {msg.topic}")
+            # Mapper les capteurs aux IDs de notre système
+            sensor_map = {
+                "capteur/temperature": "SEN-202",     # Capteur de température -> SEN-202
+                "capteur/humidite": "SEN-203",        # Capteur d'humidité -> SEN-203  
+                "capteur/debit_urinaire": "SEN-201",  # Capteur de débit urinaire -> SEN-201 (pression)
+                "capteur/poul": "SEN-204",            # Capteur de pouls -> SEN-204 (mouvement)
+                "capteur/creatine": "SEN-205"         # Capteur de créatine -> SEN-205 (autre mouvement)
+            }
+            
+            # Extraire le type de capteur du topic
+            topic = msg.topic
+            
+            # Affecter un ID de capteur basé sur le topic
+            sensor_id = sensor_map.get(topic)
+            if not sensor_id:
+                self.logger.warning(f"Topic non reconnu: {topic}")
                 return
                 
-            # Extraire l'ID du matelas et du capteur du topic
-            mattress_id = topic_parts[2]
-            sensor_id = topic_parts[3]
+            # Tous les capteurs appartiennent au matelas 1
+            mattress_id = "MAT-101"
             
-            # Parse the message payload as JSON
-            payload = json.loads(msg.payload.decode())
+            # Déterminer le type de capteur basé sur le topic
+            sensor_type_from_topic = topic.split('/')[1]  # Exemple: 'capteur/temperature' -> 'temperature'
             
-            # Extraire les données du payload
-            value = payload.get("value")
-            sensor_type = payload.get("type")
+            try:
+                # Tenter de décoder le payload JSON
+                payload = json.loads(msg.payload.decode())
+                value = payload.get("valeur")
+                esp32_id = payload.get("esp32_id")
+                timestamp = payload.get("timestamp")
+            except (json.JSONDecodeError, AttributeError):
+                # Si ce n'est pas du JSON, essayer de traiter comme une valeur brute
+                try:
+                    value = float(msg.payload.decode().strip())
+                    esp32_id = None
+                    timestamp = None
+                except ValueError:
+                    self.logger.warning(f"Impossible de parser le payload: {msg.payload}")
+                    return
             
-            if value is not None and sensor_type is not None:
-                # Conserver le type de capteur dans notre format interne
-                mapped_type = self.sensor_type_map.get(sensor_type, sensor_type)
+            # Mapping du type de capteur
+            mapped_type = self.sensor_type_map.get(sensor_type_from_topic, sensor_type_from_topic)
+            
+            # Stocker les données
+            if sensor_id not in self.latest_data:
+                self.latest_data[sensor_id] = {}
+            
+            self.latest_data[sensor_id] = {
+                'timestamp': timestamp or datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                'type': mapped_type,
+                'value': value,
+                'topic': topic,
+                'mattress_id': mattress_id,
+                'esp32_id': esp32_id
+            }
+            
+            self.logger.info(f"Données mises à jour pour le capteur {sensor_id} du matelas {mattress_id}: {value} ({mapped_type})")
                 
-                # Ajouter aux données les plus récentes
-                if sensor_id not in self.latest_data:
-                    self.latest_data[sensor_id] = {}
-                
-                self.latest_data[sensor_id] = {
-                    'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                    'type': mapped_type,
-                    'value': value,
-                    'topic': msg.topic,
-                    'mattress_id': mattress_id
-                }
-                
-                self.logger.info(f"Données mises à jour pour le capteur {sensor_id} du matelas {mattress_id}: {value} ({mapped_type})")
-            else:
-                self.logger.warning(f"Données incomplètes reçues: valeur={value}, type={sensor_type}")
-                
-        except json.JSONDecodeError:
-            self.logger.warning(f"JSON invalide reçu: {msg.payload}")
         except Exception as e:
             self.logger.error(f"Erreur lors du traitement du message: {e}")
     
@@ -169,28 +203,48 @@ class MQTTIntegration:
 # Création d'une instance globale pour l'intégration MQTT
 mqtt_integration = None
 
-def initialize_mqtt_integration(host="localhost", port=1883):
+def initialize_mqtt_integration(host="localhost", port=1883, username=None, password=None, topics=None):
     """
     Initialise l'intégration MQTT
+    
+    Parameters:
+    - host: Adresse du broker MQTT
+    - port: Port du broker MQTT
+    - username: Nom d'utilisateur pour l'authentification (optionnel)
+    - password: Mot de passe pour l'authentification (optionnel)
+    - topics: Liste des topics à écouter (optionnel)
     """
     global mqtt_integration
     
-    if mqtt_integration is None:
-        mqtt_integration = MQTTIntegration(host=host, port=port)
-        success = mqtt_integration.connect()
-        
-        if success:
-            # Stocker l'intégration dans le session state pour qu'elle soit accessible partout
-            if 'mqtt_integration' not in st.session_state:
-                st.session_state['mqtt_integration'] = mqtt_integration
-            
-            logging.info("Intégration MQTT initialisée et connectée")
-            return mqtt_integration
-        else:
-            logging.error("Échec de l'initialisation de l'intégration MQTT")
-            return None
+    # Si l'intégration existe déjà, la déconnecter d'abord
+    if mqtt_integration is not None:
+        try:
+            mqtt_integration.disconnect()
+        except:
+            pass
+        mqtt_integration = None
     
-    return mqtt_integration
+    # Créer une nouvelle instance
+    mqtt_integration = MQTTIntegration(
+        host=host, 
+        port=port, 
+        username=username, 
+        password=password,
+        topics=topics
+    )
+    
+    # Se connecter
+    success = mqtt_integration.connect()
+    
+    if success:
+        # Stocker l'intégration dans le session state pour qu'elle soit accessible partout
+        st.session_state['mqtt_integration'] = mqtt_integration
+        
+        logging.info(f"Intégration MQTT initialisée et connectée à {host}:{port}")
+        return mqtt_integration
+    else:
+        logging.error(f"Échec de l'initialisation de l'intégration MQTT avec {host}:{port}")
+        return None
 
 def get_mqtt_integration():
     """

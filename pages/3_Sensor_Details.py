@@ -105,17 +105,25 @@ time_delta_map = {
 }
 selected_delta = time_delta_map[time_range]
 
-# Generate historical data based on time range
-# In a real application, this would be fetched from the database
+# Get time range for the data
 end_time = datetime.now()
 start_time = end_time - selected_delta
 
-# Generate sample time series data for this demo
-historical_data = generate_sample_data(
+# For Matelas 1, use the real MQTT data when available
+from utils.data_manager import get_sensor_readings
+
+# Get historical data using the data manager - it will use MQTT data when available
+time_map = {
+    "1 hour": "hour",
+    "24 hours": "day",
+    "7 days": "week",
+    "30 days": "month"
+}
+timeframe = time_map.get(time_range, "day")
+historical_data = get_sensor_readings(
+    sensor_id=selected_sensor_id,
     sensor_type=selected_sensor['type'],
-    start_time=start_time,
-    end_time=end_time,
-    interval_seconds=300 if time_range in ["1 hour", "24 hours"] else 3600
+    timeframe=timeframe
 )
 
 # Display last refresh time
@@ -183,11 +191,32 @@ with col2:
     # Current readings
     st.subheader(tr("current_readings"))
     
+    # Check if we have live MQTT data for this sensor
+    mqtt_value = None
+    is_live_data = False
+    
+    if selected_sensor['mattress_id'] == "MAT-101" and 'mqtt_integration' in st.session_state:
+        mqtt_integration = st.session_state['mqtt_integration']
+        if mqtt_integration and mqtt_integration.connected:
+            mqtt_data = mqtt_integration.get_latest_data(selected_sensor_id)
+            if mqtt_data:
+                mqtt_value = mqtt_data.get('value')
+                is_live_data = True
+                
+                # Add a live data indicator
+                st.markdown(
+                    '<div style="display:flex; align-items:center; margin-bottom:10px;">'
+                    '<div style="width:10px; height:10px; border-radius:50%; background-color:#28a745; margin-right:5px;"></div>'
+                    '<span>Données en direct</span>'
+                    '</div>',
+                    unsafe_allow_html=True
+                )
+    
     # Get the latest value
-    latest_value = historical_data['value'].iloc[-1] if not historical_data.empty else 0
+    latest_value = mqtt_value if is_live_data else (historical_data['value'].iloc[-1] if not historical_data.empty else 0)
     
     # Create a gauge chart for the current reading
-    gauge_title = f"{tr('current')} {selected_sensor['type']} {tr('reading')}"
+    gauge_title = f"{tr('current')} {selected_sensor['type']} {tr('reading')}" + (" (LIVE)" if is_live_data else "")
     
     # Different units and thresholds based on sensor type
     if selected_sensor['type'] == 'pressure':

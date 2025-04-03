@@ -45,6 +45,71 @@ mattress_sensors = sensors_data[sensors_data['mattress_id'] == selected_mattress
 # Display last refresh time
 st.sidebar.info(f"{tr('last_update')}: {st.session_state.last_update.strftime('%Y-%m-%d %H:%M:%S')}")
 
+# MQTT Connection for Mattress 1
+if selected_mattress_id == "MAT-101":  # Uniquement pour le matelas 1
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("Configuration MQTT")
+    
+    with st.sidebar.expander("Configuration MQTT pour Matelas 1", expanded=False):
+        # Formulaire pour la connexion MQTT
+        with st.form("mqtt_config_form"):
+            mqtt_host = st.text_input("Adresse du broker MQTT", value="localhost")
+            mqtt_port = st.number_input("Port MQTT", value=1883, min_value=1, max_value=65535)
+            mqtt_username = st.text_input("Nom d'utilisateur (optionnel)")
+            mqtt_password = st.text_input("Mot de passe (optionnel)", type="password")
+            
+            # List of topics to subscribe to
+            st.markdown("Topics MQTT par défaut:")
+            st.code("""capteur/temperature
+capteur/humidite
+capteur/debit_urinaire
+capteur/poul
+capteur/creatine""")
+            
+            # Form submission
+            submit_button = st.form_submit_button("Connecter au Broker MQTT")
+            
+            if submit_button:
+                from utils.mqtt_integration import initialize_mqtt_integration
+                
+                # Tenter de se connecter au broker MQTT
+                with st.spinner("Connexion au broker MQTT..."):
+                    mqtt_integration = initialize_mqtt_integration(
+                        host=mqtt_host,
+                        port=int(mqtt_port),
+                        username=mqtt_username if mqtt_username else None,
+                        password=mqtt_password if mqtt_password else None
+                    )
+                    
+                    if mqtt_integration and mqtt_integration.connected:
+                        st.success(f"Connecté au broker MQTT à {mqtt_host}:{mqtt_port}")
+                        
+                        # Stocker les informations de connexion pour les réutiliser
+                        st.session_state['mqtt_broker_info'] = {
+                            'host': mqtt_host,
+                            'port': mqtt_port,
+                            'username': mqtt_username,
+                            'password': mqtt_password
+                        }
+                        
+                        # Mettre à jour le timestamp de dernière mise à jour
+                        st.session_state.last_update = datetime.now()
+                    else:
+                        st.error(f"Échec de connexion au broker MQTT à {mqtt_host}:{mqtt_port}")
+
+    # Afficher un indicateur si connecté au broker MQTT
+    if 'mqtt_integration' in st.session_state and st.session_state.get('mqtt_integration').connected:
+        broker_info = st.session_state.get('mqtt_broker_info', {})
+        st.sidebar.success(f"✅ Connecté au broker MQTT à {broker_info.get('host', 'localhost')}:{broker_info.get('port', 1883)}")
+        
+        if st.sidebar.button("Déconnecter du Broker MQTT"):
+            if 'mqtt_integration' in st.session_state:
+                mqtt_integration = st.session_state['mqtt_integration']
+                mqtt_integration.disconnect()
+                st.session_state['mqtt_integration'] = None
+                st.sidebar.info("Déconnecté du broker MQTT")
+                st.rerun()
+
 # Refresh button
 if st.sidebar.button(tr("refresh_data")):
     st.rerun()
@@ -203,15 +268,50 @@ with col2:
         for sensor in mattress_sensors.itertuples():
             status_color = get_sensor_status_color(sensor.status)
             
+            # Vérifier si nous avons des données MQTT pour ce capteur
+            mqtt_data = None
+            mqtt_value = None
+            
+            if selected_mattress_id == "MAT-101" and 'mqtt_integration' in st.session_state:
+                mqtt_integration = st.session_state['mqtt_integration']
+                if mqtt_integration and mqtt_integration.connected:
+                    mqtt_data = mqtt_integration.get_latest_data(sensor.id)
+                    if mqtt_data:
+                        mqtt_value = mqtt_data.get('value')
+            
             with st.container():
+                # Ajouter un badge "Données en direct" pour les capteurs avec données MQTT
+                live_badge = ""
+                if mqtt_data:
+                    live_badge = '<span style="background-color:#28a745; color:white; padding:3px 8px; border-radius:10px; font-size:0.8em; margin-left:10px;">LIVE</span>'
+                
+                # Formatter la valeur et l'unité en fonction du type de capteur
+                value_display = ""
+                if mqtt_value is not None:
+                    if sensor.type == 'temperature':
+                        value_display = f"<strong>Valeur actuelle:</strong> <span style='font-size:1.2em;'>{mqtt_value:.1f} °C</span>"
+                    elif sensor.type == 'humidity':
+                        value_display = f"<strong>Valeur actuelle:</strong> <span style='font-size:1.2em;'>{mqtt_value:.1f} %</span>"
+                    elif sensor.type == 'pressure':
+                        value_display = f"<strong>Valeur actuelle:</strong> <span style='font-size:1.2em;'>{mqtt_value:.1f} mmHg</span>"
+                    elif sensor.type == 'movement':
+                        value_display = f"<strong>Valeur actuelle:</strong> <span style='font-size:1.2em;'>{mqtt_value:.1f} unités</span>"
+                    else:
+                        value_display = f"<strong>Valeur actuelle:</strong> <span style='font-size:1.2em;'>{mqtt_value:.1f}</span>"
+                
+                timestamp = ""
+                if mqtt_data and mqtt_data.get('timestamp'):
+                    timestamp = f"<br><small>Dernière mise à jour: {mqtt_data.get('timestamp')}</small>"
+                
                 st.markdown(
                     f"""
                     <div style="border:1px solid #e0e0e0; border-radius:5px; padding:10px; margin-bottom:10px;">
-                        <h4 style="margin-top:0;">{sensor.name} ({sensor.type})</h4>
+                        <h4 style="margin-top:0;">{sensor.name} ({sensor.type}) {live_badge}</h4>
                         <p><strong>{tr('status')}:</strong> <span style="color:{status_color};font-weight:bold;">{sensor.status.upper()}</span></p>
                         <p><strong>{tr('power_status')}:</strong> <span style="color:green;">Connected</span></p>
                         <p><strong>{tr('signal_strength')}:</strong> {sensor.signal_strength}/10</p>
                         <p><strong>{tr('firmware_version')}:</strong> {sensor.firmware_version}</p>
+                        {f"<p>{value_display}{timestamp}</p>" if value_display else ""}
                     </div>
                     """,
                     unsafe_allow_html=True

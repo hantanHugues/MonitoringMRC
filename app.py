@@ -62,29 +62,98 @@ with st.sidebar:
             set_language(code)
             st.rerun()
     
-    # Direct Simulator Connection
-    st.markdown("### Sensor Simulator")
+    # MQTT & Sensor Simulator
+    st.markdown("### Données des capteurs")
+    
+    if 'simulator_type' not in st.session_state:
+        st.session_state['simulator_type'] = 'direct'
+    
     if not st.session_state.connected:
-        if st.button("Start Sensor Simulator"):
-            # Start the direct simulator
-            st.session_state.connected = True
-            if 'direct_simulator' in st.session_state and st.session_state.direct_simulator:
-                st.session_state.direct_simulator.start()
-                st.success("Sensor simulator started")
-            else:
-                st.warning("Failed to start simulator. Try refreshing the page.")
-            time.sleep(1)
-            st.rerun()
+        with st.expander("Options de connexion", expanded=True):
+            # Option 1: Direct Simulator (local)
+            st.markdown("##### Option 1: Simulateur intégré")
+            if st.button("Démarrer le simulateur intégré", key="start_direct"):
+                # Start the direct simulator
+                st.session_state.connected = True
+                st.session_state.simulator_type = "direct"
+                if 'direct_simulator' in st.session_state and st.session_state.direct_simulator:
+                    st.session_state.direct_simulator.start()
+                    st.success("Simulateur intégré démarré")
+                else:
+                    st.warning("Échec du démarrage du simulateur. Essayez de rafraîchir la page.")
+                time.sleep(1)
+                st.rerun()
+            
+            st.markdown("---")
+            # Option 2: External MQTT Broker
+            st.markdown("##### Option 2: Broker MQTT externe")
+            
+            with st.form("mqtt_config_form_sidebar"):
+                mqtt_host = st.text_input("Adresse du broker MQTT", value="localhost")
+                mqtt_port = st.number_input("Port MQTT", value=1883, min_value=1, max_value=65535)
+                mqtt_username = st.text_input("Nom d'utilisateur (optionnel)")
+                mqtt_password = st.text_input("Mot de passe (optionnel)", type="password")
+                
+                # Form submission
+                submit_button = st.form_submit_button("Connecter au Broker MQTT")
+                
+                if submit_button:
+                    from utils.mqtt_integration import initialize_mqtt_integration
+                    
+                    # Tenter de se connecter au broker MQTT
+                    with st.spinner("Connexion au broker MQTT..."):
+                        mqtt_integration = initialize_mqtt_integration(
+                            host=mqtt_host,
+                            port=int(mqtt_port),
+                            username=mqtt_username if mqtt_username else None,
+                            password=mqtt_password if mqtt_password else None
+                        )
+                        
+                        if mqtt_integration and mqtt_integration.connected:
+                            st.session_state.connected = True
+                            st.session_state.simulator_type = "mqtt"
+                            st.success(f"Connecté au broker MQTT à {mqtt_host}:{mqtt_port}")
+                            
+                            # Stocker les informations de connexion pour les réutiliser
+                            st.session_state['mqtt_broker_info'] = {
+                                'host': mqtt_host,
+                                'port': mqtt_port,
+                                'username': mqtt_username,
+                                'password': mqtt_password
+                            }
+                            
+                            # Mettre à jour le timestamp de dernière mise à jour
+                            st.session_state.last_update = datetime.now()
+                            time.sleep(1)
+                            st.rerun()
+                        else:
+                            st.error(f"Échec de connexion au broker MQTT à {mqtt_host}:{mqtt_port}")
     else:
-        if st.button("Stop Simulator"):
-            st.session_state.connected = False
-            if 'direct_simulator' in st.session_state and st.session_state.direct_simulator:
-                st.session_state.direct_simulator.stop()
-            st.info("Sensor simulator stopped")
-            time.sleep(1)
-            st.rerun()
+        # Afficher l'état actuel et le bouton pour arrêter
+        simulator_type = st.session_state.get('simulator_type', 'direct')
         
-        st.success("✅ Sensor simulator running")
+        if simulator_type == "direct":
+            st.success("✅ Simulateur intégré en cours d'exécution")
+            if st.button("Arrêter le simulateur"):
+                st.session_state.connected = False
+                if 'direct_simulator' in st.session_state and st.session_state.direct_simulator:
+                    st.session_state.direct_simulator.stop()
+                st.info("Simulateur arrêté")
+                time.sleep(1)
+                st.rerun()
+        else:  # MQTT
+            broker_info = st.session_state.get('mqtt_broker_info', {})
+            st.success(f"✅ Connecté au broker MQTT à {broker_info.get('host', 'localhost')}:{broker_info.get('port', 1883)}")
+            
+            if st.button("Déconnecter du broker MQTT"):
+                st.session_state.connected = False
+                if 'mqtt_integration' in st.session_state:
+                    mqtt_integration = st.session_state['mqtt_integration']
+                    mqtt_integration.disconnect()
+                    st.session_state['mqtt_integration'] = None
+                st.info("Déconnecté du broker MQTT")
+                time.sleep(1)
+                st.rerun()
     
     st.markdown("---")
     st.markdown("👨‍💻 User: Medical Technician")

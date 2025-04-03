@@ -3,6 +3,7 @@ import json
 import time
 import threading
 import logging
+from datetime import datetime
 import streamlit as st
 from datetime import datetime
 
@@ -156,7 +157,7 @@ class MQTTIntegration:
                 # Format du payload selon le code fourni
                 value = payload.get("value")
                 uid = payload.get("uid")
-                timestamp = payload.get("timestamp")
+                timestamp = datetime.fromtimestamp(payload.get("timestamp", time.time())).strftime("%Y-%m-%d %H:%M:%S")
                 
                 if value is None:
                     self.logger.warning(f"Payload incomplet: {payload}")

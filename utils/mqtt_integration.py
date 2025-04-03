@@ -38,7 +38,6 @@ class MQTTIntegration:
             self.client.username_pw_set(username, password)
         
         # Topics MQTT pour les capteurs
-        # Par défaut, on écoute les topics standard pour notre système
         self.topics = topics or [
             "capteur/temperature",
             "capteur/humidite",
@@ -47,12 +46,13 @@ class MQTTIntegration:
             "capteur/creatine"
         ]
         
-        # Map du type de capteur vers le type dans notre système
-        self.sensor_type_map = {
-            "pressure": "pressure",
-            "temperature": "temperature",
-            "humidity": "humidity",
-            "movement": "movement"
+        # Map des topics vers les types de capteurs
+        self.topic_type_map = {
+            "capteur/temperature": "temperature",
+            "capteur/humidite": "humidity",
+            "capteur/debit_urinaire": "debit",
+            "capteur/poul": "poul",
+            "capteur/creatine": "creatine"
         }
         
         # Configure logging
@@ -120,30 +120,50 @@ class MQTTIntegration:
             # Afficher le message reçu pour le débogage
             self.logger.info(f"Message reçu sur le topic {msg.topic}")
             
-            # Extraire l'ID du capteur à partir du topic
-            topic_parts = msg.topic.split('/')
-            if len(topic_parts) >= 4:
-                sensor_id = topic_parts[3]  # Format: 'hospital/mattress/MAT-101/SEN-201'
-                mattress_id = topic_parts[2]
-            else:
-                self.logger.warning(f"Format de topic non reconnu: {msg.topic}")
+            # Pour les nouveaux topics comme capteur/temperature
+            topic = msg.topic
+            if topic not in self.topic_type_map:
+                self.logger.warning(f"Topic non reconnu: {topic}")
                 return
+                
+            sensor_type = self.topic_type_map[topic]
+            
+            # Map des types de capteurs aux IDs
+            sensor_type_to_id = {
+                "temperature": "SEN-202",
+                "humidity": "SEN-203",
+                "debit": "SEN-204",
+                "poul": "SEN-205",
+                "creatine": "SEN-206"
+            }
+            
+            sensor_id = sensor_type_to_id.get(sensor_type)
+            mattress_id = "MAT-101"  # Pour le matelas connecté au broker
                 
             try:
                 # Tenter de décoder le payload JSON
                 payload = json.loads(msg.payload.decode())
                 
-                # Les champs attendus dans notre format MQTT
+                # Format du payload selon le code fourni
                 value = payload.get("value")
-                sensor_type = payload.get("type")
-                sensor_name = payload.get("name")
-                unit = payload.get("unit", "")
+                uid = payload.get("uid")
                 timestamp = payload.get("timestamp")
-                status = payload.get("status", "active")
                 
-                if value is None or sensor_type is None:
+                if value is None:
                     self.logger.warning(f"Payload incomplet: {payload}")
                     return
+                    
+                # Définir les unités selon le type de capteur
+                units = {
+                    "temperature": "°C",
+                    "humidity": "%",
+                    "debit": "L/h",
+                    "poul": "bpm",
+                    "creatine": "mg/dL"
+                }
+                unit = units.get(sensor_type, "")
+                status = "active"
+                sensor_name = f"Capteur {sensor_type.capitalize()}"
                     
             except (json.JSONDecodeError, AttributeError) as e:
                 self.logger.warning(f"Impossible de parser le payload JSON: {e}")

@@ -279,66 +279,6 @@ with col1:
         
         return live_data_found, mqtt_value
     
-    # Option de mise à jour automatique pour la page des détails du capteur
-    auto_refresh = st.sidebar.checkbox("Mise à jour automatique", value=True)
-    refresh_interval = st.sidebar.slider("Intervalle de rafraîchissement (secondes)", min_value=1, max_value=10, value=2)
-    
-    # Appel initial pour afficher les données MQTT
-    live_data_found, mqtt_value_initial = update_mqtt_data()
-    
-    # Si l'auto-refresh est activé, on démarre la boucle d'actualisation
-    if auto_refresh and 'mqtt_integration' in st.session_state:
-        # Créer un placeholder pour les mises à jour en temps réel
-        update_time_placeholder = st.sidebar.empty()
-        
-        # Boucle de rafraîchissement pour données MQTT
-        while True:
-            # Attendre l'intervalle spécifié
-            time.sleep(refresh_interval)
-            
-            # Mettre à jour les données MQTT
-            live_data_found, mqtt_value = update_mqtt_data()
-            
-            # Mettre à jour la jauge en temps réel
-            update_gauge(mqtt_value)
-            
-            # Afficher l'heure de la dernière mise à jour
-            update_time_placeholder.info(f"{tr('last_update')}: {st.session_state.last_update.strftime('%Y-%m-%d %H:%M:%S')}")
-    
-    # Affichage initial du graphique historique pour les données non MQTT
-    # Ce graphique sera remplacé par les données en temps réel pour MAT-101
-    if not historical_data.empty and not (live_data_found and selected_sensor['mattress_id'] == "MAT-101"):
-        with historical_chart_container.container():
-            st.subheader(f"{tr('historical_data')} - {time_range}")
-            
-            fig = create_time_series_chart(
-                historical_data,
-                title=f"{selected_sensor['name']} - {tr('historical_readings')}",
-                sensor_type=selected_sensor['type']
-            )
-            st.plotly_chart(fig, use_container_width=True)
-        
-        # Statistics for the selected time period
-        with stats_container.container():
-            if 'value' in historical_data.columns:
-                st.subheader(tr("statistics_for_period"))
-                
-                stats_col1, stats_col2, stats_col3, stats_col4 = st.columns(4)
-                stats_col1.metric(tr("min_value"), f"{historical_data['value'].min():.2f}")
-                stats_col2.metric(tr("max_value"), f"{historical_data['value'].max():.2f}")
-                stats_col3.metric(tr("avg_value"), f"{historical_data['value'].mean():.2f}")
-                stats_col4.metric(tr("std_dev"), f"{historical_data['value'].std():.2f}")
-    elif not live_data_found or selected_sensor['mattress_id'] != "MAT-101":
-        with historical_chart_container.container():
-            st.warning(tr("no_historical_data_available"))
-
-with col2:
-    # Current readings
-    st.subheader(tr("current_readings"))
-    
-    # Créer un conteneur vide pour la jauge
-    gauge_container = st.empty()
-    
     # Function to update the gauge with real-time data
     def update_gauge(mqtt_value=None):
         # Check if we have live MQTT data for this sensor
@@ -400,8 +340,71 @@ with col2:
             st.plotly_chart(fig, use_container_width=True)
         
         return is_live_data, latest_value
+
+    # Option de mise à jour automatique pour la page des détails du capteur
+    auto_refresh = st.sidebar.checkbox("Mise à jour automatique", value=True)
+    refresh_interval = st.sidebar.slider("Intervalle de rafraîchissement (secondes)", min_value=1, max_value=10, value=2)
+    
+    # Appel initial pour afficher les données MQTT
+    live_data_found, mqtt_value_initial = update_mqtt_data()
     
     # Initial gauge update
+    is_live_data, latest_value = update_gauge(mqtt_value_initial)
+    
+    # Si l'auto-refresh est activé, on démarre la boucle d'actualisation
+    if auto_refresh and 'mqtt_integration' in st.session_state:
+        # Créer un placeholder pour les mises à jour en temps réel
+        update_time_placeholder = st.sidebar.empty()
+        
+        # Boucle de rafraîchissement pour données MQTT
+        while True:
+            # Attendre l'intervalle spécifié
+            time.sleep(refresh_interval)
+            
+            # Mettre à jour les données MQTT
+            live_data_found, mqtt_value = update_mqtt_data()
+            
+            # Mettre à jour la jauge en temps réel
+            update_gauge(mqtt_value)
+            
+            # Afficher l'heure de la dernière mise à jour
+            update_time_placeholder.info(f"{tr('last_update')}: {st.session_state.last_update.strftime('%Y-%m-%d %H:%M:%S')}")
+    
+    # Affichage initial du graphique historique pour les données non MQTT
+    # Ce graphique sera remplacé par les données en temps réel pour MAT-101
+    if not historical_data.empty and not (live_data_found and selected_sensor['mattress_id'] == "MAT-101"):
+        with historical_chart_container.container():
+            st.subheader(f"{tr('historical_data')} - {time_range}")
+            
+            fig = create_time_series_chart(
+                historical_data,
+                title=f"{selected_sensor['name']} - {tr('historical_readings')}",
+                sensor_type=selected_sensor['type']
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        
+        # Statistics for the selected time period
+        with stats_container.container():
+            if 'value' in historical_data.columns:
+                st.subheader(tr("statistics_for_period"))
+                
+                stats_col1, stats_col2, stats_col3, stats_col4 = st.columns(4)
+                stats_col1.metric(tr("min_value"), f"{historical_data['value'].min():.2f}")
+                stats_col2.metric(tr("max_value"), f"{historical_data['value'].max():.2f}")
+                stats_col3.metric(tr("avg_value"), f"{historical_data['value'].mean():.2f}")
+                stats_col4.metric(tr("std_dev"), f"{historical_data['value'].std():.2f}")
+    elif not live_data_found or selected_sensor['mattress_id'] != "MAT-101":
+        with historical_chart_container.container():
+            st.warning(tr("no_historical_data_available"))
+
+with col2:
+    # Current readings
+    st.subheader(tr("current_readings"))
+    
+    # Créer un conteneur vide pour la jauge
+    gauge_container = st.empty()
+    
+    # Initial gauge update (using the function defined earlier)
     is_live_data, latest_value = update_gauge(mqtt_value_initial)
     
     # Power status

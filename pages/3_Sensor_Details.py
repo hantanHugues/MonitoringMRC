@@ -385,46 +385,92 @@ with col1:
     # Ce graphique sera remplacé par les données en temps réel pour MAT-101
     if not historical_data.empty and not (live_data_found and selected_sensor['mattress_id'] == "MAT-101"):
         with historical_chart_container.container():
-            st.subheader(f"{tr('historical_data')} - {time_range}")
-
-            # Create line and scatter plot
+            st.subheader(f"{tr('historical_data')} - Temps réel")
+            
+            # Create real-time line chart
             fig = go.Figure()
             
-            # Add scatter points
-            fig.add_trace(go.Scatter(
-                x=historical_data.index,
-                y=historical_data['value'],
-                mode='markers+lines',
-                name='Mesures',
-                line=dict(color='#2E86C1', width=2),
-                marker=dict(
-                    size=8,
-                    color='#2E86C1',
-                    symbol='circle'
+            # Get MQTT data if available
+            mqtt_data = None
+            if 'mqtt_integration' in st.session_state:
+                mqtt_integration = st.session_state['mqtt_integration']
+                if mqtt_integration and mqtt_integration.connected:
+                    mqtt_data = mqtt_integration.get_latest_data(selected_sensor_id, history=True)
+            
+            if mqtt_data and isinstance(mqtt_data, list):
+                # Convert MQTT timestamps to datetime
+                x_data = [datetime.strptime(d['timestamp'], "%Y-%m-%d %H:%M:%S") for d in mqtt_data]
+                y_data = [d['value'] for d in mqtt_data]
+                
+                # Add the real-time data trace
+                fig.add_trace(go.Scatter(
+                    x=x_data,
+                    y=y_data,
+                    mode='lines+markers',
+                    name='Valeurs en temps réel',
+                    line=dict(
+                        color='#2E86C1',
+                        width=2,
+                        shape='linear'
+                    ),
+                    marker=dict(
+                        size=8,
+                        symbol='circle',
+                        color='#2E86C1',
+                        line=dict(
+                            color='#FFFFFF',
+                            width=1
+                        )
+                    )
+                ))
+                
+                # Update layout with proper axes labels and grid
+                fig.update_layout(
+                    title=f"{selected_sensor['name']} - Mesures en temps réel",
+                    xaxis=dict(
+                        title='Temps',
+                        showgrid=True,
+                        gridwidth=1,
+                        gridcolor='#E5E5E5',
+                        tickformat='%H:%M:%S'
+                    ),
+                    yaxis=dict(
+                        title=f"Valeur ({selected_sensor['type']})",
+                        showgrid=True,
+                        gridwidth=1,
+                        gridcolor='#E5E5E5'
+                    ),
+                    plot_bgcolor='white',
+                    hovermode='x unified',
+                    height=500,
+                    showlegend=True
                 )
-            ))
-
-            # Update layout
-            fig.update_layout(
-                title=f"{selected_sensor['name']} - {tr('historical_readings')}",
-                xaxis_title='Temps',
-                yaxis_title=f"Valeur ({selected_sensor['type']})",
-                hovermode='x unified',
-                height=500,
-                showlegend=True,
-                plot_bgcolor='white',
-                xaxis=dict(
-                    showgrid=True,
-                    gridwidth=1,
-                    gridcolor='#E5E5E5'
-                ),
-                yaxis=dict(
-                    showgrid=True,
-                    gridwidth=1,
-                    gridcolor='#E5E5E5'
+                
+                st.plotly_chart(fig, use_container_width=True, key=f"live_chart_{datetime.now().timestamp()}")
+            else:
+                # Fallback to historical data if no MQTT data
+                fig.add_trace(go.Scatter(
+                    x=historical_data.index,
+                    y=historical_data['value'],
+                    mode='lines+markers',
+                    name='Valeurs historiques',
+                    line=dict(color='#2E86C1', width=2),
+                    marker=dict(size=8, color='#2E86C1', symbol='circle')
+                ))
+                
+                fig.update_layout(
+                    title=f"{selected_sensor['name']} - Mesures historiques",
+                    xaxis_title='Temps',
+                    yaxis_title=f"Valeur ({selected_sensor['type']})",
+                    plot_bgcolor='white',
+                    hovermode='x unified',
+                    height=500,
+                    showlegend=True,
+                    xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E5E5E5'),
+                    yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E5E5E5')
                 )
-            )
-            st.plotly_chart(fig, use_container_width=True, key=f"historical_chart_{datetime.now().timestamp()}")
+                
+                st.plotly_chart(fig, use_container_width=True, key=f"historical_chart_{datetime.now().timestamp()}")
 
         # Statistics for the selected time period
         with stats_container.container():

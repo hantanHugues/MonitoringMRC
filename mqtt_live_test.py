@@ -9,7 +9,7 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Configuration MQTT
-broker = "0.0.0.0"
+broker = "localhost"  # Adresse du broker local
 port = 1883
 
 # Topics MQTT

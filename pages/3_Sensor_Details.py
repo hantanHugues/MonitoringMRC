@@ -167,7 +167,10 @@ with col1:
     mqtt_live_container = st.empty()
     history_container = st.empty()
     info_container = st.empty()
-    gauge_container = st.empty()
+    
+    # Containers pour les graphiques
+    historical_chart_container = st.empty()
+    stats_container = st.empty()
     
     # Fonction pour mettre à jour les données MQTT en temps réel
     def update_mqtt_data():
@@ -228,6 +231,39 @@ with col1:
                             if history_rows:
                                 history_df = pd.DataFrame(history_rows)
                                 st.dataframe(history_df, use_container_width=True)
+                                
+                                # Mettre à jour également les données historiques pour le graphique
+                                if 'timestamp' in history_df.columns and 'Valeur' in history_df.columns:
+                                    try:
+                                        # Préparer les données pour le graphique
+                                        updated_historical_data = pd.DataFrame({
+                                            'timestamp': pd.to_datetime(history_df['Horodatage']),
+                                            'value': history_df['Valeur']
+                                        })
+                                        
+                                        # Mettre à jour le graphique si nous avons des données
+                                        if not updated_historical_data.empty:
+                                            with historical_chart_container.container():
+                                                st.subheader(f"{tr('historical_data')} - Temps réel")
+                                                fig = create_time_series_chart(
+                                                    updated_historical_data,
+                                                    title=f"{selected_sensor['name']} - {tr('historical_readings')} (LIVE)",
+                                                    sensor_type=selected_sensor['type']
+                                                )
+                                                st.plotly_chart(fig, use_container_width=True)
+                                            
+                                            # Mettre à jour les statistiques
+                                            with stats_container.container():
+                                                if 'value' in updated_historical_data.columns:
+                                                    st.subheader(tr("statistics_for_period"))
+                                                    
+                                                    stats_col1, stats_col2, stats_col3, stats_col4 = st.columns(4)
+                                                    stats_col1.metric(tr("min_value"), f"{updated_historical_data['value'].min():.2f}")
+                                                    stats_col2.metric(tr("max_value"), f"{updated_historical_data['value'].max():.2f}")
+                                                    stats_col3.metric(tr("avg_value"), f"{updated_historical_data['value'].mean():.2f}")
+                                                    stats_col4.metric(tr("std_dev"), f"{updated_historical_data['value'].std():.2f}")
+                                    except Exception as e:
+                                        st.error(f"Erreur lors de la mise à jour du graphique: {str(e)}")
                         else:
                             st.warning(f"Aucun historique disponible pour le capteur {selected_sensor['name']}")
                 
@@ -263,49 +299,96 @@ with col1:
             # Mettre à jour les données MQTT
             live_data_found, mqtt_value = update_mqtt_data()
             
+            # Mettre à jour la jauge en temps réel
+            update_gauge(mqtt_value)
+            
             # Afficher l'heure de la dernière mise à jour
             update_time_placeholder.info(f"{tr('last_update')}: {st.session_state.last_update.strftime('%Y-%m-%d %H:%M:%S')}")
     
-    # Historical data chart
-    st.subheader(f"{tr('historical_data')} - {time_range}")
-    
-    if not historical_data.empty:
-        fig = create_time_series_chart(
-            historical_data,
-            title=f"{selected_sensor['name']} - {tr('historical_readings')}",
-            sensor_type=selected_sensor['type']
-        )
-        st.plotly_chart(fig, use_container_width=True)
+    # Affichage initial du graphique historique pour les données non MQTT
+    # Ce graphique sera remplacé par les données en temps réel pour MAT-101
+    if not historical_data.empty and not (live_data_found and selected_sensor['mattress_id'] == "MAT-101"):
+        with historical_chart_container.container():
+            st.subheader(f"{tr('historical_data')} - {time_range}")
+            
+            fig = create_time_series_chart(
+                historical_data,
+                title=f"{selected_sensor['name']} - {tr('historical_readings')}",
+                sensor_type=selected_sensor['type']
+            )
+            st.plotly_chart(fig, use_container_width=True)
         
         # Statistics for the selected time period
-        if 'value' in historical_data.columns:
-            st.subheader(tr("statistics_for_period"))
-            
-            stats_col1, stats_col2, stats_col3, stats_col4 = st.columns(4)
-            stats_col1.metric(tr("min_value"), f"{historical_data['value'].min():.2f}")
-            stats_col2.metric(tr("max_value"), f"{historical_data['value'].max():.2f}")
-            stats_col3.metric(tr("avg_value"), f"{historical_data['value'].mean():.2f}")
-            stats_col4.metric(tr("std_dev"), f"{historical_data['value'].std():.2f}")
-            
-    else:
-        st.warning(tr("no_historical_data_available"))
+        with stats_container.container():
+            if 'value' in historical_data.columns:
+                st.subheader(tr("statistics_for_period"))
+                
+                stats_col1, stats_col2, stats_col3, stats_col4 = st.columns(4)
+                stats_col1.metric(tr("min_value"), f"{historical_data['value'].min():.2f}")
+                stats_col2.metric(tr("max_value"), f"{historical_data['value'].max():.2f}")
+                stats_col3.metric(tr("avg_value"), f"{historical_data['value'].mean():.2f}")
+                stats_col4.metric(tr("std_dev"), f"{historical_data['value'].std():.2f}")
+    elif not live_data_found or selected_sensor['mattress_id'] != "MAT-101":
+        with historical_chart_container.container():
+            st.warning(tr("no_historical_data_available"))
 
 with col2:
     # Current readings
     st.subheader(tr("current_readings"))
     
-    # Check if we have live MQTT data for this sensor
-    mqtt_value = None
-    is_live_data = False
+    # Créer un conteneur vide pour la jauge
+    gauge_container = st.empty()
     
-    if selected_sensor['mattress_id'] == "MAT-101" and 'mqtt_integration' in st.session_state:
-        mqtt_integration = st.session_state['mqtt_integration']
-        if mqtt_integration and mqtt_integration.connected:
-            mqtt_data = mqtt_integration.get_latest_data(selected_sensor_id)
-            if mqtt_data:
-                mqtt_value = mqtt_data.get('value')
-                is_live_data = True
-                
+    # Function to update the gauge with real-time data
+    def update_gauge(mqtt_value=None):
+        # Check if we have live MQTT data for this sensor
+        is_live_data = False
+        
+        if mqtt_value is None and selected_sensor['mattress_id'] == "MAT-101" and 'mqtt_integration' in st.session_state:
+            mqtt_integration = st.session_state['mqtt_integration']
+            if mqtt_integration and mqtt_integration.connected:
+                mqtt_data = mqtt_integration.get_latest_data(selected_sensor_id)
+                if mqtt_data:
+                    mqtt_value = mqtt_data.get('value')
+                    is_live_data = True
+        elif mqtt_value is not None:
+            is_live_data = True
+        
+        # Get the latest value
+        latest_value = mqtt_value if is_live_data else (historical_data['value'].iloc[-1] if not historical_data.empty else 0)
+        
+        # Create a gauge chart for the current reading
+        gauge_title = f"{tr('current')} {selected_sensor['type']} {tr('reading')}" + (" (LIVE)" if is_live_data else "")
+        
+        # Different units and thresholds based on sensor type
+        if selected_sensor['type'] == 'pressure':
+            unit = "mmHg"
+            min_val, max_val = 0, 200
+        elif selected_sensor['type'] == 'temperature':
+            unit = "°C"
+            min_val, max_val = 30, 45
+        elif selected_sensor['type'] == 'humidity':
+            unit = "%"
+            min_val, max_val = 0, 100
+        elif selected_sensor['type'] == 'movement':
+            unit = "units"
+            min_val, max_val = 0, 10
+        else:
+            unit = "units"
+            min_val, max_val = 0, 100
+        
+        # Create the gauge chart
+        fig = create_gauge_chart(
+            value=latest_value,
+            title=gauge_title,
+            suffix=unit,
+            min_value=min_val,
+            max_value=max_val
+        )
+        
+        # Update the container with the new chart
+        with gauge_container.container():
+            if is_live_data:
                 # Add a live data indicator
                 st.markdown(
                     '<div style="display:flex; align-items:center; margin-bottom:10px;">'
@@ -314,38 +397,12 @@ with col2:
                     '</div>',
                     unsafe_allow_html=True
                 )
+            st.plotly_chart(fig, use_container_width=True)
+        
+        return is_live_data, latest_value
     
-    # Get the latest value
-    latest_value = mqtt_value if is_live_data else (historical_data['value'].iloc[-1] if not historical_data.empty else 0)
-    
-    # Create a gauge chart for the current reading
-    gauge_title = f"{tr('current')} {selected_sensor['type']} {tr('reading')}" + (" (LIVE)" if is_live_data else "")
-    
-    # Different units and thresholds based on sensor type
-    if selected_sensor['type'] == 'pressure':
-        unit = "mmHg"
-        min_val, max_val = 0, 200
-    elif selected_sensor['type'] == 'temperature':
-        unit = "°C"
-        min_val, max_val = 30, 45
-    elif selected_sensor['type'] == 'humidity':
-        unit = "%"
-        min_val, max_val = 0, 100
-    elif selected_sensor['type'] == 'movement':
-        unit = "units"
-        min_val, max_val = 0, 10
-    else:
-        unit = "units"
-        min_val, max_val = 0, 100
-    
-    fig = create_gauge_chart(
-        value=latest_value,
-        title=gauge_title,
-        suffix=unit,
-        min_value=min_val,
-        max_value=max_val
-    )
-    st.plotly_chart(fig, use_container_width=True)
+    # Initial gauge update
+    is_live_data, latest_value = update_gauge(mqtt_value_initial)
     
     # Power status
     if selected_sensor['power_connection']:

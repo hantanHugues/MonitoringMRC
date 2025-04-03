@@ -23,13 +23,8 @@ def get_sensors_data():
         sensor_type = sensor_types[i % len(sensor_types)]
         status = random.choices(status_options, weights=status_weights, k=1)[0]
         
-        # Battery level based on status
-        if status == 'active':
-            battery_level = random.randint(60, 100)
-        elif status == 'error':
-            battery_level = random.randint(5, 30)
-        else:
-            battery_level = random.randint(30, 90)
+        # Power connection (all sensors are plugged in)
+        power_connection = True
         
         # Signal strength based on status
         if status == 'active':
@@ -61,7 +56,7 @@ def get_sensors_data():
             'name': f"{sensor_type.capitalize()} Sensor {i}",
             'type': sensor_type,
             'status': status,
-            'battery_level': battery_level,
+            'power_connection': power_connection,
             'signal_strength': signal_strength,
             'firmware_version': firmware_version,
             'installation_date': installation_date,
@@ -136,13 +131,13 @@ def get_alerts_data():
     # Sample alert templates
     alert_templates = [
         {
-            'title': 'Low Battery',
-            'description': 'Sensor battery level below 20%',
+            'title': 'Power Issue',
+            'description': 'Sensor power connection unstable',
             'priority': 'high'
         },
         {
-            'title': 'Critical Battery',
-            'description': 'Sensor battery level below 10%',
+            'title': 'Power Disconnected',
+            'description': 'Sensor disconnected from power source',
             'priority': 'critical'
         },
         {

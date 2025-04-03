@@ -132,6 +132,10 @@ def get_translation(key, language='en'):
             'en': 'Connected to power supply',
             'fr': 'Connecté à l\'alimentation'
         },
+        'power_status_disconnected': {
+            'en': 'Disconnected from power supply',
+            'fr': 'Déconnecté de l\'alimentation'
+        },
         'avg_signal_strength': {
             'en': 'Average Signal Strength',
             'fr': 'Force du Signal Moyenne'

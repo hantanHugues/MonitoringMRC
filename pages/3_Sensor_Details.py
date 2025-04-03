@@ -8,7 +8,7 @@ import time
 from utils.sensor_utils import get_sensor_status_color, generate_sample_data
 from utils.visualization import create_time_series_chart, create_gauge_chart
 from utils.translation import get_translation
-from utils.data_manager import get_sensors_data
+from utils.data_manager import get_sensors_data, get_sensor_types, get_mattresses_data
 
 # Page configuration
 st.set_page_config(
@@ -25,16 +25,66 @@ st.markdown(tr("sensor_details_description"))
 # Get sensors data
 sensors_data = get_sensors_data()
 
-# Sensor selector
+# Sidebar filters
 st.sidebar.header(tr("select_sensor"))
 
-# Get unique sensor IDs and names for selection
-sensor_options = {s.id: f"{s.name} ({s.type}) - {s.mattress_id}" for s in sensors_data.itertuples()}
-selected_sensor_id = st.sidebar.selectbox(
-    tr("select_sensor_prompt"),
-    options=list(sensor_options.keys()),
-    format_func=lambda x: sensor_options[x]
+# Selection by mattress or by sensor type
+selection_mode = st.sidebar.radio(
+    "Selection Mode",
+    options=["By Sensor Type", "By Mattress"]
 )
+
+if selection_mode == "By Sensor Type":
+    # Get all sensor types
+    sensor_types = get_sensor_types()
+    selected_type = st.sidebar.selectbox(
+        "Select Sensor Type",
+        options=sensor_types,
+        format_func=lambda x: x.capitalize()
+    )
+    
+    # Filter sensors by selected type
+    filtered_sensors = sensors_data[sensors_data['type'] == selected_type]
+    
+    # Create a dropdown for the filtered sensors
+    sensor_options = {s.id: f"{s.name} - {s.mattress_id if s.mattress_id else 'Unassigned'}" 
+                     for s in filtered_sensors.itertuples()}
+    
+    if sensor_options:
+        selected_sensor_id = st.sidebar.selectbox(
+            tr("select_sensor_prompt"),
+            options=list(sensor_options.keys()),
+            format_func=lambda x: sensor_options[x]
+        )
+    else:
+        st.sidebar.warning(f"No {selected_type} sensors found.")
+        st.stop()
+else:  # By Mattress
+    # Get all mattresses
+    mattresses = get_mattresses_data()
+    mattress_options = {m.id: f"{m.name} ({m.location})" for m in mattresses.itertuples()}
+    
+    selected_mattress_id = st.sidebar.selectbox(
+        "Select Mattress",
+        options=list(mattress_options.keys()),
+        format_func=lambda x: mattress_options[x]
+    )
+    
+    # Filter sensors by selected mattress
+    filtered_sensors = sensors_data[sensors_data['mattress_id'] == selected_mattress_id]
+    
+    # Create a dropdown for the filtered sensors
+    sensor_options = {s.id: f"{s.name} ({s.type})" for s in filtered_sensors.itertuples()}
+    
+    if sensor_options:
+        selected_sensor_id = st.sidebar.selectbox(
+            tr("select_sensor_prompt"),
+            options=list(sensor_options.keys()),
+            format_func=lambda x: sensor_options[x]
+        )
+    else:
+        st.sidebar.warning(f"No sensors assigned to this mattress.")
+        st.stop()
 
 # Filter to get the selected sensor
 selected_sensor = sensors_data[sensors_data['id'] == selected_sensor_id].iloc[0]
@@ -84,6 +134,10 @@ with col1:
     
     status_color = get_sensor_status_color(selected_sensor['status'])
     
+    # Check if power is connected
+    power_status = "Connected" if selected_sensor['power_connection'] else "Disconnected"
+    power_color = "green" if selected_sensor['power_connection'] else "red"
+    
     st.markdown(
         f"""
         <div style="border:1px solid #e0e0e0; border-radius:5px; padding:15px; margin-bottom:15px;">
@@ -91,7 +145,7 @@ with col1:
             <p><strong>{tr('sensor_type')}:</strong> {selected_sensor['type']}</p>
             <p><strong>{tr('mattress_id')}:</strong> {selected_sensor['mattress_id']}</p>
             <p><strong>{tr('status')}:</strong> <span style="color:{status_color};font-weight:bold;">{selected_sensor['status'].upper()}</span></p>
-            <p><strong>{tr('power_status')}:</strong> <span style="color:green;">Connected</span></p>
+            <p><strong>{tr('power_connection')}:</strong> <span style="color:{power_color};">{power_status}</span></p>
             <p><strong>{tr('signal_strength')}:</strong> {selected_sensor['signal_strength']}/10</p>
             <p><strong>{tr('firmware_version')}:</strong> {selected_sensor['firmware_version']}</p>
             <p><strong>{tr('installation_date')}:</strong> {selected_sensor['installation_date']}</p>
@@ -162,7 +216,10 @@ with col2:
     st.plotly_chart(fig, use_container_width=True)
     
     # Power status
-    st.success(f"{tr('power_status')}: {tr('power_status_ok')}")
+    if selected_sensor['power_connection']:
+        st.success(f"{tr('power_connection')}: {tr('power_status_ok')}")
+    else:
+        st.error(f"{tr('power_connection')}: {tr('power_status_disconnected')}")
     
     # Signal strength gauge
     signal_fig = create_gauge_chart(

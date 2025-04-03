@@ -18,6 +18,14 @@ st.set_page_config(
 )
 
 # Header
+# Initialiser la langue si elle n'existe pas dans la session
+if 'language' not in st.session_state:
+    st.session_state['language'] = 'en'
+    
+# Initialiser la date de dernière mise à jour
+if 'last_update' not in st.session_state:
+    st.session_state['last_update'] = datetime.now()
+
 tr = lambda key: get_translation(key, st.session_state.language)
 st.title(tr("sensor_details_title"))
 st.markdown(tr("sensor_details_description"))
@@ -171,6 +179,9 @@ with col1:
     # Containers pour les graphiques
     historical_chart_container = st.empty()
     stats_container = st.empty()
+    
+    # Créer un conteneur vide pour la jauge (défini ici pour éviter l'erreur)
+    gauge_container = st.empty()
     
     # Fonction pour mettre à jour les données MQTT en temps réel
     def update_mqtt_data():
@@ -400,9 +411,6 @@ with col1:
 with col2:
     # Current readings
     st.subheader(tr("current_readings"))
-    
-    # Créer un conteneur vide pour la jauge
-    gauge_container = st.empty()
     
     # Initial gauge update (using the function defined earlier)
     is_live_data, latest_value = update_gauge(mqtt_value_initial)

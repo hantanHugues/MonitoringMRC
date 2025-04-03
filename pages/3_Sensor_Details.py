@@ -387,10 +387,31 @@ with col1:
         with historical_chart_container.container():
             st.subheader(f"{tr('historical_data')} - {time_range}")
 
-            fig = create_time_series_chart(
+            # Create scatter plot
+            fig = px.scatter(
                 historical_data,
+                x=historical_data.index,
+                y='value',
                 title=f"{selected_sensor['name']} - {tr('historical_readings')}",
-                sensor_type=selected_sensor['type']
+                labels={'index': 'Temps', 'value': f"Valeur ({selected_sensor['type']})"}
+            )
+
+            # Add line connecting points
+            fig.add_trace(
+                go.Scatter(
+                    x=historical_data.index,
+                    y=historical_data['value'],
+                    mode='lines',
+                    line=dict(color='rgba(0,100,255,0.5)'),
+                    name='Tendance'
+                )
+            )
+
+            # Update layout
+            fig.update_layout(
+                showlegend=True,
+                hovermode='x unified',
+                height=400
             )
             st.plotly_chart(fig, use_container_width=True, key=f"historical_chart_{datetime.now().timestamp()}")
 

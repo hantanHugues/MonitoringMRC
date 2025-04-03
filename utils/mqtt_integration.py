@@ -40,11 +40,11 @@ class MQTTIntegration:
         # Topics MQTT pour les capteurs
         # Par défaut, on écoute les topics standard pour notre système
         self.topics = topics or [
-            "hospital/mattress/MAT-101/SEN-201",
-            "hospital/mattress/MAT-101/SEN-202", 
-            "hospital/mattress/MAT-101/SEN-203",
-            "hospital/mattress/MAT-101/SEN-204",
-            "hospital/mattress/MAT-101/SEN-205"
+            "capteur/temperature",
+            "capteur/humidite",
+            "capteur/debit_urinaire", 
+            "capteur/poul",
+            "capteur/creatine"
         ]
         
         # Map du type de capteur vers le type dans notre système

@@ -33,7 +33,7 @@ sensor_types = {
         "min_value": 0,
         "max_value": 100,
         "unit": "mmHg",
-        "frequency": 5,  # secondes entre les mesures
+        "frequency": 5,
     },
     "SEN-202": {
         "type": "temperature",
@@ -48,6 +48,27 @@ sensor_types = {
         "max_value": 70,
         "unit": "%",
         "frequency": 15,
+    },
+    "SEN-204": {
+        "type": "debit_urinaire",
+        "min_value": 0,
+        "max_value": 200,
+        "unit": "ml/h",
+        "frequency": 20,
+    },
+    "SEN-205": {
+        "type": "poul",
+        "min_value": 40,
+        "max_value": 120,
+        "unit": "bpm",
+        "frequency": 1,
+    },
+    "SEN-206": {
+        "type": "creatine",
+        "min_value": 0.5,
+        "max_value": 1.5,
+        "unit": "mg/dL",
+        "frequency": 30,
     }
 }
 

@@ -154,33 +154,28 @@ class MQTTIntegration:
                     self.logger.error(f"Error getting sensor ID for mattress {mattress_id}, sensor {sensor_type}")
                     return None
 
-            # Extraire l'ID du matelas depuis l'UUID
-            mattress_map = {
-                "1234567890abcdef": "MAT-101",
-                "abcdef1234567890": "MAT-102", 
-                "0abcdef123456789": "MAT-103",
-                "def0123456789abc": "MAT-104",
-                "789abcdef012345": "MAT-105"
-            }
-            mattress_id = mattress_map.get(uid)
-            if not mattress_id:
-                self.logger.warning(f"UUID non reconnu: {uid}")
-                return
+            try:
+                # Tenter de décoder le payload JSON
+                payload = json.loads(msg.payload.decode())
+                value = payload.get("value")
+                uid = payload.get("uid", "1234567890abcdef")  # Default to MAT-101
+                timestamp = datetime.fromtimestamp(payload.get("timestamp", time.time())).strftime("%Y-%m-%d %H:%M:%S")
+
+                # Extraire l'ID du matelas depuis l'UUID
+                mattress_map = {
+                    "1234567890abcdef": "MAT-101",
+                    "abcdef1234567890": "MAT-102", 
+                    "0abcdef123456789": "MAT-103",
+                    "def0123456789abc": "MAT-104",
+                    "789abcdef012345": "MAT-105"
+                }
+                mattress_id = mattress_map.get(uid, "MAT-101")  # Default to MAT-101
 
             sensor_id = get_sensor_id(sensor_type, mattress_id)
             if sensor_id is None:
               return
 
-            try:
-                # Tenter de décoder le payload JSON
-                payload = json.loads(msg.payload.decode())
-
-                # Format du payload selon le code fourni
-                value = payload.get("value")
-                uid = payload.get("uid")
-                timestamp = datetime.fromtimestamp(payload.get("timestamp", time.time())).strftime("%Y-%m-%d %H:%M:%S")
-
-                if value is None:
+            if value is None:
                     self.logger.warning(f"Payload incomplet: {payload}")
                     return
 

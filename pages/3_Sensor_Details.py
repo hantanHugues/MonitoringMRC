@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import numpy as np
 import time
+import threading
 from utils.sensor_utils import get_sensor_status_color, generate_sample_data
 from utils.visualization import create_time_series_chart, create_gauge_chart
 from utils.translation import get_translation
@@ -168,7 +169,7 @@ def get_real_time_data():
                 historical_data = pd.concat([historical_data, new_data]).tail(100)
                 
                 # Update chart
-                with chart_container:
+                with historical_chart_container:
                     fig = create_time_series_chart(
                         historical_data,
                         title=f"{selected_sensor['name']} - {tr('historical_readings')}",

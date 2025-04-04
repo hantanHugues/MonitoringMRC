@@ -158,9 +158,14 @@ class MQTTIntegration:
             mattress_map = {
                 "1234567890abcdef": "MAT-101",
                 "abcdef1234567890": "MAT-102", 
-                "0abcdef123456789": "MAT-103"
+                "0abcdef123456789": "MAT-103",
+                "def0123456789abc": "MAT-104",
+                "789abcdef012345": "MAT-105"
             }
-            mattress_id = mattress_map.get(uid, "MAT-101")
+            mattress_id = mattress_map.get(uid)
+            if not mattress_id:
+                self.logger.warning(f"UUID non reconnu: {uid}")
+                return
 
             sensor_id = get_sensor_id(sensor_type, mattress_id)
             if sensor_id is None:

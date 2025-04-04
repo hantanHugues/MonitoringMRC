@@ -45,12 +45,11 @@ mattress_sensors = sensors_data[sensors_data['mattress_id'] == selected_mattress
 # Display last refresh time
 st.sidebar.info(f"{tr('last_update')}: {st.session_state.last_update.strftime('%Y-%m-%d %H:%M:%S')}")
 
-# MQTT Connection for Mattress 1
-if selected_mattress_id == "MAT-101":  # Uniquement pour le matelas 1
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("Configuration MQTT")
-    
-    with st.sidebar.expander("Configuration MQTT pour Matelas 1", expanded=False):
+# MQTT Connection for selected mattress
+st.sidebar.markdown("---")
+st.sidebar.subheader("Configuration MQTT")
+
+with st.sidebar.expander(f"Configuration MQTT pour {selected_mattress['name']}", expanded=False):
         # Formulaire pour la connexion MQTT
         with st.form("mqtt_config_form"):
             mqtt_host = st.text_input("Adresse du broker MQTT", value="localhost")

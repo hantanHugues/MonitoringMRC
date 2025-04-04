@@ -66,9 +66,9 @@ def get_sensors_data():
         else:
             mattress_id = None
         
-        # For sensors on mattress 1 (first 3 sensors), check if we have MQTT data or simulated data
+        # Check if we have MQTT data for any mattress
         is_mqtt_updated = False
-        if mattress_id == "MAT-101" and i <= 3:
+        if mattress_id:  # If sensor is assigned to a mattress
             # 1. First try to get data from MQTT broker (highest priority)
             if 'mqtt_integration' in st.session_state:
                 mqtt_integration = st.session_state['mqtt_integration']

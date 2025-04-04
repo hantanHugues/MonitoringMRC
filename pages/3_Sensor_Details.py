@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -121,22 +122,10 @@ with col1:
     current_value_container = st.empty()
     st.markdown('</div>', unsafe_allow_html=True)
 
+with col2:
     # Graphique historique
     st.markdown('<div class="sensor-card">', unsafe_allow_html=True)
     historical_chart_container = st.empty()
-    st.markdown('</div>', unsafe_allow_html=True)
-
-with col2:
-    # Statistiques et tendances
-    st.markdown('<div class="sensor-card">', unsafe_allow_html=True)
-    st.subheader("📊 Statistiques")
-    stats_container = st.empty()
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # Tableau des dernières valeurs
-    st.markdown('<div class="sensor-card">', unsafe_allow_html=True)
-    st.subheader("📋 Dernières Mesures")
-    table_container = st.empty()
     st.markdown('</div>', unsafe_allow_html=True)
 
 with col3:
@@ -177,10 +166,15 @@ historical_data = generate_sample_data(
     sensor_type=selected_sensor['type']
 )
 
+# Créer les conteneurs pour les statistiques et le tableau
+stats_container = st.container()
+table_container = st.container()
+
 # Fonction de mise à jour des données en temps réel
 def update_sensor_data():
     while True:
         try:
+            # Simuler ou obtenir des données MQTT
             mqtt_data = None
             if 'mqtt_integration' in st.session_state:
                 mqtt_integration = st.session_state['mqtt_integration']
@@ -207,6 +201,7 @@ def update_sensor_data():
                             datetime.now().strftime("%H:%M:%S")
                         )
 
+                # Mettre à jour les données historiques
                 if not historical_data.empty:
                     new_data = pd.DataFrame({
                         'timestamp': [datetime.now()],
@@ -214,36 +209,14 @@ def update_sensor_data():
                     })
                     historical_data = pd.concat([historical_data, new_data]).tail(100)
 
-                    # Afficher les statistiques
-                    with stats_container:
-                        col1, col2, col3 = st.columns(3)
-                        with col1:
-                            st.metric("Moyenne", f"{historical_data['value'].mean():.1f} {selected_sensor['unit']}")
-                        with col2:
-                            st.metric("Maximum", f"{historical_data['value'].max():.1f} {selected_sensor['unit']}")
-                        with col3:
-                            st.metric("Minimum", f"{historical_data['value'].min():.1f} {selected_sensor['unit']}")
-
                     # Afficher le graphique
-                    st.markdown("### 📈 Historique des mesures")
-                    fig = px.line(
-                        historical_data,
-                        x='timestamp',
-                        y='value',
-                        title=f"Évolution - {selected_sensor['name']}",
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-
-                    # Afficher le tableau
-                    st.markdown("### 📋 Dernières mesures")
-                    st.dataframe(
-                        historical_data.tail(10).sort_values('timestamp', ascending=False),
-                        use_container_width=True,
-                        hide_index=True
-                    )
+                    with historical_chart_container:
+                        st.subheader("📈 Historique des mesures")
+                        fig = px.line(
+                            historical_data,
                             x='timestamp',
                             y='value',
-                            title=f"Évolution des données - {selected_sensor['name']}",
+                            title=f"Évolution - {selected_sensor['name']}",
                             labels={'value': f"Valeur ({selected_sensor['unit']})", 'timestamp': 'Temps'}
                         )
                         fig.update_layout(
@@ -252,17 +225,27 @@ def update_sensor_data():
                             height=400,
                             margin=dict(l=20, r=20, t=40, b=20)
                         )
-                        st.plotly_chart(fig, use_container_width=True, key=f"chart_{selected_sensor['id']}")
+                        st.plotly_chart(fig, use_container_width=True)
 
+                    # Afficher les statistiques
+                    with stats_container:
+                        st.subheader("📊 Statistiques")
+                        stat_cols = st.columns(3)
+                        with stat_cols[0]:
+                            st.metric("Moyenne", f"{historical_data['value'].mean():.1f} {selected_sensor['unit']}")
+                        with stat_cols[1]:
+                            st.metric("Maximum", f"{historical_data['value'].max():.1f} {selected_sensor['unit']}")
+                        with stat_cols[2]:
+                            st.metric("Minimum", f"{historical_data['value'].min():.1f} {selected_sensor['unit']}")
+
+                    # Afficher le tableau
                     with table_container:
                         st.subheader("📋 Dernières mesures")
                         st.dataframe(
                             historical_data.tail(10).sort_values('timestamp', ascending=False),
                             use_container_width=True,
-                            hide_index=True,
-                            key=f"table_{selected_sensor['id']}"
+                            hide_index=True
                         )
-
 
         except Exception as e:
             st.error(f"Erreur de mise à jour: {e}")

@@ -1,6 +1,8 @@
 
 import streamlit as st
 import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import time
 import threading
@@ -202,27 +204,37 @@ with col2:
     st.markdown('<div class="sensor-info">', unsafe_allow_html=True)
     st.subheader("📈 Évolution des données")
     
-    # Tableau des dernières valeurs
     if not historical_data.empty:
-        st.dataframe(
-            historical_data.tail(10).sort_values('timestamp', ascending=False),
-            use_container_width=True,
-            hide_index=True
-        )
+        # Create two columns for better layout
+        data_col1, data_col2 = st.columns([1, 2])
         
-        # Créer un graphique ligne pour l'historique
-        fig = px.line(
-            historical_data,
-            x='timestamp',
-            y='value',
-            title=f"Historique des mesures - {selected_sensor['name']}",
-            labels={'value': f"Valeur ({selected_sensor['unit']})", 'timestamp': 'Temps'}
-        )
-        fig.update_layout(
-            xaxis=dict(rangeslider=dict(visible=True)),
-            yaxis_title=f"Valeur ({selected_sensor['unit']})"
-        )
-        st.plotly_chart(fig, use_container_width=True)
+        with data_col1:
+            # Tableau des dernières valeurs
+            st.markdown("##### Dernières mesures")
+            st.dataframe(
+                historical_data.tail(5).sort_values('timestamp', ascending=False),
+                use_container_width=True,
+                hide_index=True
+            )
+        
+        with data_col2:
+            # Créer un graphique ligne pour l'historique
+            fig = px.line(
+                historical_data,
+                x='timestamp',
+                y='value',
+                title=f"Historique des mesures - {selected_sensor['name']}",
+                labels={'value': f"Valeur ({selected_sensor['unit']})", 'timestamp': 'Temps'}
+            )
+            fig.update_layout(
+                xaxis=dict(rangeslider=dict(visible=True)),
+                yaxis_title=f"Valeur ({selected_sensor['unit']})",
+                height=300,
+                margin=dict(l=20, r=20, t=40, b=20)
+            )
+            st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("Aucune donnée historique disponible")
     st.markdown('</div>', unsafe_allow_html=True)
 
 # Configuration parameters

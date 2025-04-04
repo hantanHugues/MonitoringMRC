@@ -124,6 +124,66 @@ historical_data = get_sensor_readings(
     timeframe=timeframe
 )
 
+# Create placeholder for real-time updates
+real_time_container = st.empty()
+
+# Auto-refresh function
+def get_real_time_data():
+    while True:
+        # Get MQTT data if available
+        mqtt_data = None
+        if 'mqtt_integration' in st.session_state:
+            mqtt_integration = st.session_state['mqtt_integration']
+            if mqtt_integration and mqtt_integration.connected:
+                mqtt_data = mqtt_integration.get_latest_data(selected_sensor_id)
+        
+        # Get direct simulator data if MQTT not available
+        if not mqtt_data and 'direct_simulator' in st.session_state:
+            direct_simulator = st.session_state['direct_simulator']
+            if direct_simulator:
+                mqtt_data = direct_simulator.get_latest_data(selected_sensor_id)
+        
+        # Update the display if we have data
+        if mqtt_data:
+            with real_time_container:
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.metric(
+                        label="Valeur actuelle",
+                        value=f"{mqtt_data.get('value', 0):.1f} {selected_sensor['unit']}",
+                        delta=f"{mqtt_data.get('value', 0) - historical_data['value'].mean():.1f}" if not historical_data.empty else None
+                    )
+                with col2:
+                    st.metric(
+                        label="Dernière mise à jour",
+                        value=datetime.now().strftime("%H:%M:%S")
+                    )
+            
+            # Update historical data
+            if not historical_data.empty:
+                new_data = pd.DataFrame({
+                    'timestamp': [datetime.now()],
+                    'value': [mqtt_data.get('value', 0)]
+                })
+                historical_data = pd.concat([historical_data, new_data]).tail(100)
+                
+                # Update chart
+                with chart_container:
+                    fig = create_time_series_chart(
+                        historical_data,
+                        title=f"{selected_sensor['name']} - {tr('historical_readings')}",
+                        sensor_type=selected_sensor['type']
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+        
+        time.sleep(5)  # Update every 5 seconds
+
+# Start auto-refresh in a separate thread
+if 'refresh_thread' not in st.session_state:
+    refresh_thread = threading.Thread(target=get_real_time_data, daemon=True)
+    refresh_thread.start()
+    st.session_state['refresh_thread'] = refresh_thread
+
 # Display last refresh time
 st.sidebar.info(f"{tr('last_update')}: {st.session_state.last_update.strftime('%Y-%m-%d %H:%M:%S')}")
 

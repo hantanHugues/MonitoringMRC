@@ -43,17 +43,35 @@ selected_mattress_id = st.sidebar.selectbox(
     format_func=lambda x: mattress_options[x]
 )
 
-# Filter sensors by selected mattress
-filtered_sensors = sensors_data[sensors_data['mattress_id'] == selected_mattress_id].copy()
+# Create all required sensors for the selected mattress if they don't exist
+sensor_types = [
+    ('temperature', 'Capteur de température', '°C'),
+    ('humidity', 'Capteur d\'humidité', '%'),
+    ('debit_urinaire', 'Capteur de débit urinaire', 'L/h'),
+    ('poul', 'Capteur de pouls', 'bpm'),
+    ('creatine', 'Capteur de créatine', 'mg/dL')
+]
 
-# Configuration des capteurs par matelas
-mattress_sensors = {
-    'temperature': {'name': 'Capteur de température', 'unit': '°C', 'id_base': 202},
-    'humidity': {'name': 'Capteur d\'humidité', 'unit': '%', 'id_base': 203},
-    'debit_urinaire': {'name': 'Capteur de débit urinaire', 'unit': 'L/h', 'id_base': 204},
-    'poul': {'name': 'Capteur de pouls', 'unit': 'bpm', 'id_base': 205},
-    'creatine': {'name': 'Capteur de créatine', 'unit': 'mg/dL', 'id_base': 206}
-}
+# Filter sensors by selected mattress
+filtered_sensors = []
+base_id = 201
+
+for sensor_type, name, unit in sensor_types:
+    sensor_id = f"SEN-{base_id}"
+    filtered_sensors.append({
+        'id': sensor_id,
+        'name': name,
+        'type': sensor_type,
+        'unit': unit,
+        'mattress_id': selected_mattress_id,
+        'status': 'active',
+        'power_connection': True,
+        'signal_strength': 10,
+        'firmware_version': 'v1.0'
+    })
+    base_id += 1
+
+filtered_sensors = pd.DataFrame(filtered_sensors)
 
 # Add units for each sensor type
 unit_map = {

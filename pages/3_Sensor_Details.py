@@ -81,21 +81,53 @@ else:  # By Mattress
     # Filter sensors by selected mattress
     filtered_sensors = sensors_data[sensors_data['mattress_id'] == selected_mattress_id]
 
-    # Create a dropdown for the filtered sensors
-    sensor_options = {s.id: f"{s.name} ({s.type})" for s in filtered_sensors.itertuples()}
-
-    if sensor_options:
-        selected_sensor_id = st.sidebar.selectbox(
-            tr("select_sensor_prompt"),
-            options=list(sensor_options.keys()),
-            format_func=lambda x: sensor_options[x]
-        )
+    # Afficher tous les capteurs du matelas
+    if not filtered_sensors.empty:
+        st.sidebar.success(f"{len(filtered_sensors)} capteurs trouvés pour ce matelas")
+        
+        # Créer des tabs pour chaque type de capteur
+        sensor_types = filtered_sensors['type'].unique()
+        tabs = st.tabs([type.capitalize() for type in sensor_types])
+        
+        for tab, sensor_type in zip(tabs, sensor_types):
+            with tab:
+                # Filtrer les capteurs par type
+                type_sensors = filtered_sensors[filtered_sensors['type'] == sensor_type]
+                
+                for sensor in type_sensors.itertuples():
+                    with st.container():
+                        st.subheader(f"{sensor.name} ({sensor.type})")
+                        
+                        # Afficher les données MQTT en temps réel pour ce capteur
+                        if 'mqtt_integration' in st.session_state and st.session_state['mqtt_integration'].connected:
+                            mqtt_data = st.session_state['mqtt_integration'].get_latest_data(sensor.id)
+                            if mqtt_data:
+                                st.metric(
+                                    "Valeur actuelle",
+                                    f"{mqtt_data.get('value')} {mqtt_data.get('unit', '')}"
+                                )
+                        
+                        # Créer un graphique pour ce capteur
+                        historical_data = get_sensor_readings(
+                            sensor_id=sensor.id,
+                            sensor_type=sensor.type,
+                            timeframe=timeframe
+                        )
+                        
+                        if not historical_data.empty:
+                            fig = create_time_series_chart(
+                                historical_data,
+                                title=f"{sensor.name} - {tr('historical_readings')}",
+                                sensor_type=sensor.type
+                            )
+                            st.plotly_chart(fig, use_container_width=True)
+                        
+                        st.markdown("---")
     else:
         st.sidebar.warning(f"No sensors assigned to this mattress.")
         st.stop()
 
-# Filter to get the selected sensor
-selected_sensor = sensors_data[sensors_data['id'] == selected_sensor_id].iloc[0]
+# On ne sélectionne plus un seul capteur puisqu'on les affiche tous
 
 # Time range selector for historical data
 st.sidebar.header(tr("time_range"))

@@ -46,12 +46,19 @@ selected_mattress_id = st.sidebar.selectbox(
 # Filter sensors by selected mattress
 filtered_sensors = sensors_data[sensors_data['mattress_id'] == selected_mattress_id].copy()
 
+# Configuration des capteurs par matelas
+mattress_sensors = {
+    'temperature': {'name': 'Capteur de température', 'unit': '°C', 'id_base': 202},
+    'humidity': {'name': 'Capteur d\'humidité', 'unit': '%', 'id_base': 203},
+    'debit_urinaire': {'name': 'Capteur de débit urinaire', 'unit': 'L/h', 'id_base': 204},
+    'poul': {'name': 'Capteur de pouls', 'unit': 'bpm', 'id_base': 205},
+    'creatine': {'name': 'Capteur de créatine', 'unit': 'mg/dL', 'id_base': 206}
+}
+
 # Add units for each sensor type
 unit_map = {
     'temperature': '°C',
     'humidity': '%',
-    'pressure': 'mmHg',
-    'movement': 'units',
     'debit_urinaire': 'L/h',
     'poul': 'bpm',
     'creatine': 'mg/dL'

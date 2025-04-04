@@ -13,7 +13,7 @@ def get_sensors_data():
     For other mattresses, data is simulated
     """
     # Sensor types
-    sensor_types = ['pressure', 'temperature', 'humidity', 'movement']
+    sensor_types = ['temperature', 'humidity', 'debit_urinaire', 'poul', 'creatine']
     
     # Status options
     status_options = ['active', 'inactive', 'maintenance', 'error']

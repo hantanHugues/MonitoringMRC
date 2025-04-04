@@ -151,15 +151,14 @@ with col2:
     # Current readings
     st.subheader(tr("current_readings"))
 
-    # Create gauge for current value
+    # Display current value
     if not historical_data.empty:
         latest_value = historical_data['value'].iloc[-1]
-        fig = create_gauge_chart(
-            value=latest_value,
-            title=f"{tr('current')} {selected_sensor['type']} {tr('reading')}",
-            suffix=selected_sensor['unit'] if 'unit' in selected_sensor else "units" #added this line
+        unit = selected_sensor.get('unit', '')
+        st.metric(
+            label=f"{tr('current')} {selected_sensor['type']} {tr('reading')}",
+            value=f"{latest_value:.2f} {unit}"
         )
-        st.plotly_chart(fig, use_container_width=True)
 
     # Power status
     if selected_sensor['power_connection']:
@@ -167,14 +166,11 @@ with col2:
     else:
         st.error(f"{tr('power_connection')}: {tr('power_status_disconnected')}")
 
-    # Signal strength gauge
-    signal_fig = create_gauge_chart(
-        value=selected_sensor['signal_strength'],
-        title=tr("signal_strength"),
-        suffix="/10",
-        max_value=10
+    # Signal strength
+    st.metric(
+        label=tr("signal_strength"),
+        value=f"{selected_sensor['signal_strength']}/10"
     )
-    st.plotly_chart(signal_fig, use_container_width=True)
 
     # Action buttons
     st.subheader(tr("sensor_actions"))

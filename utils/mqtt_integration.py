@@ -141,11 +141,11 @@ class MQTTIntegration:
             # Map des types de capteurs aux IDs par matelas
             def get_sensor_id(sensor_type, mattress_id):
                 base_ids = {
-                    "temperature": 202,
-                    "humidity": 203,
-                    "debit": 204,
-                    "poul": 205,
-                    "creatine": 206
+                    "temperature": lambda mat_num: 202 + ((mat_num - 101) * 10),
+                    "humidity": lambda mat_num: 203 + ((mat_num - 101) * 10),
+                    "debit": lambda mat_num: 204 + ((mat_num - 101) * 10),
+                    "poul": lambda mat_num: 205 + ((mat_num - 101) * 10),
+                    "creatine": lambda mat_num: 206 + ((mat_num - 101) * 10)
                 }
                 try:
                     mat_num = int(mattress_id.split('-')[1])
@@ -154,7 +154,13 @@ class MQTTIntegration:
                     self.logger.error(f"Error getting sensor ID for mattress {mattress_id}, sensor {sensor_type}")
                     return None
 
-            mattress_id = "MAT-101"  # A modifier pour gérer plusieurs matelas
+            # Extraire l'ID du matelas depuis l'UUID
+            mattress_map = {
+                "1234567890abcdef": "MAT-101",
+                "abcdef1234567890": "MAT-102", 
+                "0abcdef123456789": "MAT-103"
+            }
+            mattress_id = mattress_map.get(uid, "MAT-101")
 
             sensor_id = get_sensor_id(sensor_type, mattress_id)
             if sensor_id is None:

@@ -38,16 +38,30 @@ st.sidebar.header(tr("select_sensor"))
 # Selection by mattress
 mattress_options = {m.id: f"{m.name} ({m.location})" for m in mattresses_data.itertuples()}
 selected_mattress_id = st.sidebar.selectbox(
-    "Select Mattress",
+    tr("select_mattress"),
     options=list(mattress_options.keys()),
     format_func=lambda x: mattress_options[x]
 )
 
 # Filter sensors by selected mattress
-filtered_sensors = sensors_data[sensors_data['mattress_id'] == selected_mattress_id]
+filtered_sensors = sensors_data[sensors_data['mattress_id'] == selected_mattress_id].copy()
 
-# Create a dropdown for the filtered sensors
-sensor_options = {s.id: f"{s.name} ({s.type})" for s in filtered_sensors.itertuples()}
+# Add units for each sensor type
+unit_map = {
+    'temperature': '°C',
+    'humidity': '%',
+    'pressure': 'mmHg',
+    'movement': 'units',
+    'debit_urinaire': 'L/h',
+    'poul': 'bpm',
+    'creatine': 'mg/dL'
+}
+
+# Add units to filtered sensors
+filtered_sensors['unit'] = filtered_sensors['type'].map(unit_map)
+
+# Create a dropdown for the filtered sensors with units
+sensor_options = {s.id: f"{s.name} ({s.type} - {s.unit})" for s in filtered_sensors.itertuples()}
 
 if sensor_options:
     selected_sensor_id = st.sidebar.selectbox(

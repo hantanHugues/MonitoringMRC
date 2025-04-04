@@ -9,7 +9,7 @@ deploymentTarget = "autoscale"
 run = ["sh", "-c", "run dev"]
 
 [workflows]
-runButton = "MQTT Setup"
+runButton = "MQTT Broker"
 
 [[workflows.workflow]]
 name = "Project"

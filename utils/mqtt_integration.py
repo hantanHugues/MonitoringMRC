@@ -179,6 +179,19 @@ class MQTTIntegration:
                 if value is None:
                     self.logger.warning(f"Payload incomplet: {payload}")
                     return
+
+                # Définir les unités selon le type de capteur
+                units = {
+                    "temperature": "°C",
+                    "humidity": "%",
+                    "debit": "L/h",
+                    "poul": "bpm",
+                    "creatine": "mg/dL"
+                }
+                unit = units.get(sensor_type, "")
+                status = "active"
+                sensor_name = f"Capteur {sensor_type.capitalize()}"
+
             except Exception as e:
                 self.logger.error(f"Erreur lors du traitement du message: {e}")
                 return

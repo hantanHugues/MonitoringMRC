@@ -231,7 +231,7 @@ def update_sensor_data():
                         with col3:
                             st.metric("Minimum", f"{historical_data['value'].min():.1f} {selected_sensor['unit']}")
 
-                    with table_container:
+                    with historical_chart_container:
                         st.subheader("📈 Historique des mesures")
                         fig = px.line(
                             historical_data,
@@ -248,7 +248,7 @@ def update_sensor_data():
                         )
                         st.plotly_chart(fig, use_container_width=True)
 
-                        # Afficher le tableau des données en dessous
+                    with table_container:
                         st.subheader("📋 Dernières mesures")
                         st.dataframe(
                             historical_data.tail(10).sort_values('timestamp', ascending=False),

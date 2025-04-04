@@ -214,6 +214,7 @@ def update_sensor_data():
                     })
                     historical_data = pd.concat([historical_data, new_data]).tail(100)
 
+                    # Afficher les statistiques
                     with stats_container:
                         col1, col2, col3 = st.columns(3)
                         with col1:
@@ -223,10 +224,23 @@ def update_sensor_data():
                         with col3:
                             st.metric("Minimum", f"{historical_data['value'].min():.1f} {selected_sensor['unit']}")
 
-                    with historical_chart_container:
-                        st.subheader("📈 Historique des mesures")
-                        fig = px.line(
-                            historical_data,
+                    # Afficher le graphique
+                    st.markdown("### 📈 Historique des mesures")
+                    fig = px.line(
+                        historical_data,
+                        x='timestamp',
+                        y='value',
+                        title=f"Évolution - {selected_sensor['name']}",
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+
+                    # Afficher le tableau
+                    st.markdown("### 📋 Dernières mesures")
+                    st.dataframe(
+                        historical_data.tail(10).sort_values('timestamp', ascending=False),
+                        use_container_width=True,
+                        hide_index=True
+                    )
                             x='timestamp',
                             y='value',
                             title=f"Évolution des données - {selected_sensor['name']}",

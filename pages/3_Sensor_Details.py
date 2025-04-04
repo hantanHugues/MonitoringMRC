@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -62,7 +61,7 @@ mattresses_data = get_mattresses_data()
 # Sidebar pour les filtres
 with st.sidebar:
     st.header("🔍 Sélection du Capteur")
-    
+
     # Sélection par matelas
     mattress_options = {m.id: f"{m.name} ({m.location})" for m in mattresses_data.itertuples()}
     selected_mattress_id = st.selectbox(
@@ -91,7 +90,7 @@ with st.sidebar:
         })
 
     filtered_sensors = pd.DataFrame(filtered_sensors)
-    
+
     # Sélection du capteur
     sensor_options = {s.id: f"{s.name} ({s.type} - {s.unit})" for s in filtered_sensors.itertuples()}
     selected_sensor_id = st.selectbox(
@@ -121,7 +120,7 @@ with col1:
     st.subheader("📈 Valeurs Actuelles")
     current_value_container = st.empty()
     st.markdown('</div>', unsafe_allow_html=True)
-    
+
     # Graphique historique
     st.markdown('<div class="sensor-card">', unsafe_allow_html=True)
     historical_chart_container = st.empty()
@@ -133,7 +132,7 @@ with col2:
     st.subheader("📊 Statistiques")
     stats_container = st.empty()
     st.markdown('</div>', unsafe_allow_html=True)
-    
+
     # Tableau des dernières valeurs
     st.markdown('<div class="sensor-card">', unsafe_allow_html=True)
     st.subheader("📋 Dernières Mesures")
@@ -153,7 +152,7 @@ with col3:
         - 🛏️ **Matelas:** {selected_sensor['mattress_id']}
     """, unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
-    
+
     # Actions rapides
     st.markdown('<div class="sensor-card">', unsafe_allow_html=True)
     st.subheader("⚡ Actions Rapides")
@@ -187,7 +186,7 @@ def update_sensor_data():
                 mqtt_integration = st.session_state['mqtt_integration']
                 if mqtt_integration and mqtt_integration.connected:
                     mqtt_data = mqtt_integration.get_latest_data(selected_sensor_id)
-            
+
             if not mqtt_data and 'direct_simulator' in st.session_state:
                 direct_simulator = st.session_state['direct_simulator']
                 if direct_simulator:
@@ -233,11 +232,30 @@ def update_sensor_data():
                             st.metric("Minimum", f"{historical_data['value'].min():.1f} {selected_sensor['unit']}")
 
                     with table_container:
+                        st.subheader("📈 Historique des mesures")
+                        fig = px.line(
+                            historical_data,
+                            x='timestamp',
+                            y='value',
+                            title=f"Évolution des données - {selected_sensor['name']}",
+                            labels={'value': f"Valeur ({selected_sensor['unit']})", 'timestamp': 'Temps'}
+                        )
+                        fig.update_layout(
+                            xaxis=dict(rangeslider=dict(visible=True)),
+                            yaxis_title=f"Valeur ({selected_sensor['unit']})",
+                            height=400,
+                            margin=dict(l=20, r=20, t=40, b=20)
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+
+                        # Afficher le tableau des données en dessous
+                        st.subheader("📋 Dernières mesures")
                         st.dataframe(
-                            historical_data.tail(5).sort_values('timestamp', ascending=False),
+                            historical_data.tail(10).sort_values('timestamp', ascending=False),
                             use_container_width=True,
                             hide_index=True
                         )
+
 
         except Exception as e:
             st.error(f"Erreur de mise à jour: {e}")

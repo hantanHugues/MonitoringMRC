@@ -299,10 +299,17 @@ with col1:
         st.markdown(f'<span style="color:{get_sensor_status_color("error")};font-weight:bold;">● {tr("status_error")}</span>', unsafe_allow_html=True)
 
 with col2:
-    # Sensors list
+    # Sensors list and real-time data
     st.subheader(tr("sensors_on_mattress"))
     
+    # Create containers for real-time data display
+    live_data_container = st.container()
+    chart_container = st.container()
+    
     if not mattress_sensors.empty:
+        # Create DataFrame for real-time data
+        mqtt_rows = []
+        
         for sensor in mattress_sensors.itertuples():
             status_color = get_sensor_status_color(sensor.status)
             
@@ -310,11 +317,83 @@ with col2:
             mqtt_data = None
             mqtt_value = None
             
-            if 'mqtt_integration' in st.session_state and st.session_state['mqtt_integration'].connected: #Check connection before accessing
+            if 'mqtt_integration' in st.session_state and st.session_state['mqtt_integration'].connected:
                 mqtt_integration = st.session_state['mqtt_integration']
                 mqtt_data = mqtt_integration.get_latest_data(sensor.id)
+                
                 if mqtt_data:
                     mqtt_value = mqtt_data.get('value')
+                    # Add to real-time data table
+                    mqtt_rows.append({
+                        "Capteur": sensor.name,
+                        "Type": sensor.type,
+                        "Valeur": mqtt_value,
+                        "Unité": mqtt_data.get('unit', ''),
+                        "Horodatage": mqtt_data.get('timestamp', '')
+                    })
+                    
+                    # Get historical data for charts
+                    historical_data = mqtt_integration.get_latest_data(sensor.id, history=True)
+                    if historical_data and isinstance(historical_data, list):
+                        with chart_container:
+                            st.subheader(f"Historique {sensor.name}")
+                            
+                            # Create real-time line chart
+                            fig = go.Figure()
+                            
+                            # Convert MQTT timestamps to datetime
+                            x_data = [datetime.strptime(d['timestamp'], "%Y-%m-%d %H:%M:%S") for d in historical_data]
+                            y_data = [d['value'] for d in historical_data]
+                            
+                            # Add the real-time data trace
+                            fig.add_trace(go.Scatter(
+                                x=x_data,
+                                y=y_data,
+                                mode='lines+markers',
+                                name=sensor.name,
+                                line=dict(
+                                    color=status_color,
+                                    width=2,
+                                    shape='linear'
+                                ),
+                                marker=dict(
+                                    size=8,
+                                    symbol='circle',
+                                    line=dict(
+                                        color='white',
+                                        width=1
+                                    )
+                                )
+                            ))
+                            
+                            # Update layout
+                            fig.update_layout(
+                                title=f"{sensor.name} - Mesures en temps réel",
+                                xaxis=dict(
+                                    title='Temps',
+                                    showgrid=True,
+                                    gridwidth=1,
+                                    gridcolor='#E5E5E5'
+                                ),
+                                yaxis=dict(
+                                    title=f"Valeur ({sensor.type})",
+                                    showgrid=True,
+                                    gridwidth=1,
+                                    gridcolor='#E5E5E5'
+                                ),
+                                plot_bgcolor='white',
+                                hovermode='x unified',
+                                height=300
+                            )
+                            
+                            st.plotly_chart(fig, use_container_width=True, key=f"chart_{sensor.id}")
+        
+        # Display real-time data table
+        if mqtt_rows:
+            with live_data_container:
+                st.subheader("Données en temps réel")
+                mqtt_df = pd.DataFrame(mqtt_rows)
+                st.dataframe(mqtt_df, use_container_width=True)
             
             with st.container():
                 # Ajouter un badge "Données en direct" pour les capteurs avec données MQTT

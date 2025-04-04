@@ -147,13 +147,94 @@ if 'update_thread' not in st.session_state:
     st.session_state['update_thread'] = update_thread
 
 with col2:
-    # Sensor info
-    st.subheader("Sensor Information")
-    st.write(f"**ID:** {selected_sensor['id']}")
-    st.write(f"**Type:** {selected_sensor['type']}")
-    st.write(f"**Unit:** {selected_sensor['unit']}")
-    st.write(f"**Status:** {selected_sensor['status']}")
-    st.write(f"**Mattress:** {selected_sensor['mattress_id']}")
+    # Sensor info in a styled container
+    with st.container():
+        st.markdown("""
+        <style>
+        .sensor-info {
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 10px 0;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        st.markdown('<div class="sensor-info">', unsafe_allow_html=True)
+        st.subheader("🔍 Informations du capteur")
+        status_color = get_sensor_status_color(selected_sensor['status'])
+        st.markdown(f"""
+        - 🏷️ **ID:** {selected_sensor['id']}
+        - 📊 **Type:** {selected_sensor['type']}
+        - 📏 **Unité:** {selected_sensor['unit']}
+        - 🔌 **État:** <span style='color:{status_color};font-weight:bold;'>{selected_sensor['status'].upper()}</span>
+        - 🛏️ **Matelas:** {selected_sensor['mattress_id']}
+        """, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # Controls and actions
+    st.markdown('<div class="sensor-info">', unsafe_allow_html=True)
+    st.subheader("⚙️ Contrôles")
+    
+    # Action buttons
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🔄 Calibrer", key="calibrate_btn"):
+            st.info("Calibration en cours...")
+            
+        if st.button("📊 Exporter données", key="export_btn"):
+            st.download_button(
+                label="📥 Télécharger CSV",
+                data=historical_data.to_csv().encode('utf-8'),
+                file_name=f'sensor_{selected_sensor["id"]}_data.csv',
+                mime='text/csv',
+            )
+    
+    with col2:
+        if st.button("🔧 Maintenance", key="maintenance_btn"):
+            st.info("Mode maintenance activé")
+            
+        if st.button("⚠️ Test alarme", key="test_alarm_btn"):
+            st.warning("Test d'alarme effectué")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # Sensor status gauge
+    st.markdown('<div class="sensor-info">', unsafe_allow_html=True)
+    st.subheader("📊 État du signal")
+    signal_fig = create_gauge_chart(
+        value=8.5,
+        title="Force du signal",
+        suffix="/10",
+        min_value=0,
+        max_value=10
+    )
+    st.plotly_chart(signal_fig, use_container_width=True)
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# Configuration parameters
+st.markdown("### ⚙️ Paramètres du capteur")
+with st.expander("Voir les paramètres"):
+    config_col1, config_col2 = st.columns(2)
+    
+    with config_col1:
+        st.number_input("Seuil minimal", value=0.0, step=0.1)
+        st.number_input("Seuil maximal", value=100.0, step=0.1)
+        
+    with config_col2:
+        st.slider("Fréquence d'échantillonnage (s)", min_value=1, max_value=60, value=10)
+        st.selectbox("Mode de mesure", ["Normal", "Haute précision", "Économie d'énergie"])
+
+# Statistics
+st.markdown("### 📈 Statistiques")
+stats_col1, stats_col2, stats_col3 = st.columns(3)
+
+if not historical_data.empty:
+    with stats_col1:
+        st.metric("Moyenne", f"{historical_data['value'].mean():.1f} {selected_sensor['unit']}")
+    with stats_col2:
+        st.metric("Maximum", f"{historical_data['value'].max():.1f} {selected_sensor['unit']}")
+    with stats_col3:
+        st.metric("Minimum", f"{historical_data['value'].min():.1f} {selected_sensor['unit']}")
 
 # Display last refresh time
 st.sidebar.info(f"{tr('last_update')}: {st.session_state.last_update.strftime('%Y-%m-%d %H:%M:%S')}")

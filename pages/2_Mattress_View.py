@@ -45,69 +45,68 @@ mattress_sensors = sensors_data[sensors_data['mattress_id'] == selected_mattress
 # Display last refresh time
 st.sidebar.info(f"{tr('last_update')}: {st.session_state.last_update.strftime('%Y-%m-%d %H:%M:%S')}")
 
-# MQTT Connection for selected mattress
+# MQTT Connection Configuration
 st.sidebar.markdown("---")
 st.sidebar.subheader("Configuration MQTT")
 
 with st.sidebar.expander(f"Configuration MQTT pour {selected_mattress['name']}", expanded=False):
-        # Formulaire pour la connexion MQTT
-        with st.form("mqtt_config_form"):
-            mqtt_host = st.text_input("Adresse du broker MQTT", value="localhost")
-            mqtt_port = st.number_input("Port MQTT", value=1883, min_value=1, max_value=65535)
-            mqtt_username = st.text_input("Nom d'utilisateur (optionnel)")
-            mqtt_password = st.text_input("Mot de passe (optionnel)", type="password")
-            
-            # List of topics to subscribe to
-            st.markdown("Topics MQTT par défaut:")
-            st.code("""capteur/temperature
+    with st.form("mqtt_config_form"):
+        mqtt_host = st.text_input("Adresse du broker MQTT", value="localhost")
+        mqtt_port = st.number_input("Port MQTT", value=1883, min_value=1, max_value=65535)
+        mqtt_username = st.text_input("Nom d'utilisateur (optionnel)")
+        mqtt_password = st.text_input("Mot de passe (optionnel)", type="password")
+
+        # List of topics to subscribe to
+        st.markdown("Topics MQTT par défaut:")
+        st.code("""capteur/temperature
 capteur/humidite
 capteur/debit_urinaire
 capteur/poul
 capteur/creatine""")
-            
-            # Form submission
-            submit_button = st.form_submit_button("Connecter au Broker MQTT")
-            
-            if submit_button:
-                from utils.mqtt_integration import initialize_mqtt_integration
-                
-                # Tenter de se connecter au broker MQTT
-                with st.spinner("Connexion au broker MQTT..."):
-                    mqtt_integration = initialize_mqtt_integration(
-                        host=mqtt_host,
-                        port=int(mqtt_port),
-                        username=mqtt_username if mqtt_username else None,
-                        password=mqtt_password if mqtt_password else None
-                    )
-                    
-                    if mqtt_integration and mqtt_integration.connected:
-                        st.success(f"Connecté au broker MQTT à {mqtt_host}:{mqtt_port}")
-                        
-                        # Stocker les informations de connexion pour les réutiliser
-                        st.session_state['mqtt_broker_info'] = {
-                            'host': mqtt_host,
-                            'port': mqtt_port,
-                            'username': mqtt_username,
-                            'password': mqtt_password
-                        }
-                        
-                        # Mettre à jour le timestamp de dernière mise à jour
-                        st.session_state.last_update = datetime.now()
-                    else:
-                        st.error(f"Échec de connexion au broker MQTT à {mqtt_host}:{mqtt_port}")
 
-    # Afficher un indicateur si connecté au broker MQTT
-    if 'mqtt_integration' in st.session_state and st.session_state.get('mqtt_integration').connected:
-        broker_info = st.session_state.get('mqtt_broker_info', {})
-        st.sidebar.success(f"✅ Connecté au broker MQTT à {broker_info.get('host', 'localhost')}:{broker_info.get('port', 1883)}")
-        
-        if st.sidebar.button("Déconnecter du Broker MQTT"):
-            if 'mqtt_integration' in st.session_state:
-                mqtt_integration = st.session_state['mqtt_integration']
-                mqtt_integration.disconnect()
-                st.session_state['mqtt_integration'] = None
-                st.sidebar.info("Déconnecté du broker MQTT")
-                st.rerun()
+        # Form submission
+        submit_button = st.form_submit_button("Connecter au Broker MQTT")
+
+        if submit_button:
+            from utils.mqtt_integration import initialize_mqtt_integration
+
+            # Try to connect to MQTT broker
+            with st.spinner("Connexion au broker MQTT..."):
+                mqtt_integration = initialize_mqtt_integration(
+                    host=mqtt_host,
+                    port=int(mqtt_port),
+                    username=mqtt_username if mqtt_username else None,
+                    password=mqtt_password if mqtt_password else None
+                )
+
+                if mqtt_integration and mqtt_integration.connected:
+                    st.success(f"Connecté au broker MQTT à {mqtt_host}:{mqtt_port}")
+
+                    # Store connection info for reuse
+                    st.session_state['mqtt_broker_info'] = {
+                        'host': mqtt_host,
+                        'port': mqtt_port,
+                        'username': mqtt_username,
+                        'password': mqtt_password
+                    }
+
+                    # Update last refresh timestamp
+                    st.session_state.last_update = datetime.now()
+                else:
+                    st.error(f"Échec de connexion au broker MQTT à {mqtt_host}:{mqtt_port}")
+
+# Show MQTT connection status
+if 'mqtt_integration' in st.session_state and st.session_state.get('mqtt_integration').connected:
+    broker_info = st.session_state.get('mqtt_broker_info', {})
+    st.sidebar.success(f"✅ Connecté au broker MQTT à {broker_info.get('host', 'localhost')}:{broker_info.get('port', 1883)}")
+
+    if st.sidebar.button("Déconnecter du Broker MQTT"):
+        if 'mqtt_integration' in st.session_state:
+            mqtt_integration = st.session_state['mqtt_integration']
+            mqtt_integration.disconnect()
+            st.session_state['mqtt_integration'] = None
+            st.sidebar.info("Déconnecté du broker MQTT")
+            st.rerun()
 
 # Refresh button
 if st.sidebar.button(tr("refresh_data")):
@@ -142,7 +141,7 @@ with col1:
     # Configuration améliorée de la visualisation
     # Using 3D representation for better visualization
     fig = go.Figure()
-
+    
     # Define mattress dimensions and 3D properties
     mattress_length = 200  # cm
     mattress_width = 90    # cm
@@ -221,12 +220,11 @@ with col1:
         
         # Add sensor as 3D marker with real-time data
         mqtt_value = None
-        if selected_mattress_id == "MAT-101" and 'mqtt_integration' in st.session_state:
+        if 'mqtt_integration' in st.session_state and st.session_state['mqtt_integration'].connected: #Check connection before accessing
             mqtt_integration = st.session_state['mqtt_integration']
-            if mqtt_integration and mqtt_integration.connected:
-                mqtt_data = mqtt_integration.get_latest_data(sensor.id)
-                if mqtt_data:
-                    mqtt_value = mqtt_data.get('value')
+            mqtt_data = mqtt_integration.get_latest_data(sensor.id)
+            if mqtt_data:
+                mqtt_value = mqtt_data.get('value')
 
         # Dynamic size based on sensor value
         marker_size = 15
@@ -312,12 +310,11 @@ with col2:
             mqtt_data = None
             mqtt_value = None
             
-            if selected_mattress_id == "MAT-101" and 'mqtt_integration' in st.session_state:
+            if 'mqtt_integration' in st.session_state and st.session_state['mqtt_integration'].connected: #Check connection before accessing
                 mqtt_integration = st.session_state['mqtt_integration']
-                if mqtt_integration and mqtt_integration.connected:
-                    mqtt_data = mqtt_integration.get_latest_data(sensor.id)
-                    if mqtt_data:
-                        mqtt_value = mqtt_data.get('value')
+                mqtt_data = mqtt_integration.get_latest_data(sensor.id)
+                if mqtt_data:
+                    mqtt_value = mqtt_data.get('value')
             
             with st.container():
                 # Ajouter un badge "Données en direct" pour les capteurs avec données MQTT

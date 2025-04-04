@@ -214,14 +214,6 @@ def update_sensor_data():
                     })
                     historical_data = pd.concat([historical_data, new_data]).tail(100)
 
-                    with historical_chart_container:
-                        fig = create_time_series_chart(
-                            historical_data,
-                            f"Évolution - {selected_sensor['name']}",
-                            selected_sensor['type']
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
-
                     with stats_container:
                         col1, col2, col3 = st.columns(3)
                         with col1:
@@ -246,14 +238,15 @@ def update_sensor_data():
                             height=400,
                             margin=dict(l=20, r=20, t=40, b=20)
                         )
-                        st.plotly_chart(fig, use_container_width=True)
+                        st.plotly_chart(fig, use_container_width=True, key=f"chart_{selected_sensor['id']}")
 
                     with table_container:
                         st.subheader("📋 Dernières mesures")
                         st.dataframe(
                             historical_data.tail(10).sort_values('timestamp', ascending=False),
                             use_container_width=True,
-                            hide_index=True
+                            hide_index=True,
+                            key=f"table_{selected_sensor['id']}"
                         )
 
 

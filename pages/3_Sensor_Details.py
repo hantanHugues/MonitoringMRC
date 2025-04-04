@@ -198,17 +198,31 @@ with col2:
             st.warning("Test d'alarme effectué")
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Sensor status gauge
+    # Graphiques des données historiques
     st.markdown('<div class="sensor-info">', unsafe_allow_html=True)
-    st.subheader("📊 État du signal")
-    signal_fig = create_gauge_chart(
-        value=8.5,
-        title="Force du signal",
-        suffix="/10",
-        min_value=0,
-        max_value=10
-    )
-    st.plotly_chart(signal_fig, use_container_width=True)
+    st.subheader("📈 Évolution des données")
+    
+    # Tableau des dernières valeurs
+    if not historical_data.empty:
+        st.dataframe(
+            historical_data.tail(10).sort_values('timestamp', ascending=False),
+            use_container_width=True,
+            hide_index=True
+        )
+        
+        # Créer un graphique ligne pour l'historique
+        fig = px.line(
+            historical_data,
+            x='timestamp',
+            y='value',
+            title=f"Historique des mesures - {selected_sensor['name']}",
+            labels={'value': f"Valeur ({selected_sensor['unit']})", 'timestamp': 'Temps'}
+        )
+        fig.update_layout(
+            xaxis=dict(rangeslider=dict(visible=True)),
+            yaxis_title=f"Valeur ({selected_sensor['unit']})"
+        )
+        st.plotly_chart(fig, use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 # Configuration parameters

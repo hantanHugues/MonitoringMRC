@@ -160,6 +160,9 @@ time_map = {
     "30 days": "month"
 }
 timeframe = time_map.get(time_range, "day")
+# Récupérer les informations du capteur sélectionné
+selected_sensor = sensors_data[sensors_data['id'] == selected_sensor_id].iloc[0]
+
 historical_data = get_sensor_readings(
     sensor_id=selected_sensor_id,
     sensor_type=selected_sensor['type'],

@@ -141,15 +141,16 @@ class MQTTIntegration:
             # Map des types de capteurs aux IDs par matelas
             def get_sensor_id(sensor_type, mattress_id):
                 base_ids = {
-                    "temperature": lambda mat_num: 202 + ((mat_num - 101) * 10),
-                    "humidity": lambda mat_num: 203 + ((mat_num - 101) * 10),
-                    "debit": lambda mat_num: 204 + ((mat_num - 101) * 10),
-                    "poul": lambda mat_num: 205 + ((mat_num - 101) * 10),
-                    "creatine": lambda mat_num: 206 + ((mat_num - 101) * 10)
+                    "temperature": 202,
+                    "humidity": 203,
+                    "debit": 204,
+                    "poul": 205,
+                    "creatine": 206
                 }
                 try:
                     mat_num = int(mattress_id.split('-')[1])
-                    return base_ids[sensor_type] + (mat_num - 101) * 10
+                    offset = (mat_num - 101) * 10
+                    return base_ids[sensor_type] + offset
                 except (ValueError, KeyError, IndexError):
                     self.logger.error(f"Error getting sensor ID for mattress {mattress_id}, sensor {sensor_type}")
                     return None

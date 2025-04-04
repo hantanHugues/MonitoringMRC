@@ -140,15 +140,39 @@ with col1:
     # Mattress visualization with sensor placements
     st.subheader(tr("mattress_visualization"))
     
-    # Create a visual representation of the mattress with sensor placements
-    # This is a simplified representation where we'll use a rectangle to represent the mattress
-    # and circles to represent sensor positions
-    
+    # Configuration améliorée de la visualisation
+    # Using 3D representation for better visualization
     fig = go.Figure()
-    
-    # Define mattress dimensions
+
+    # Define mattress dimensions and 3D properties
     mattress_length = 200  # cm
     mattress_width = 90    # cm
+    mattress_height = 20   # cm
+    
+    # Create 3D mattress surface
+    X = [0, mattress_length, mattress_length, 0, 0]
+    Y = [0, 0, mattress_width, mattress_width, 0]
+    Z = [0, 0, 0, 0, 0]
+    
+    # Add mattress base
+    fig.add_trace(go.Mesh3d(
+        x=[0, mattress_length, mattress_length, 0, 0],
+        y=[0, 0, mattress_width, mattress_width, 0],
+        z=[0, 0, 0, 0, 0],
+        color='lightblue',
+        opacity=0.6,
+        name='Mattress Base'
+    ))
+    
+    # Add mattress top surface
+    fig.add_trace(go.Mesh3d(
+        x=[0, mattress_length, mattress_length, 0, 0],
+        y=[0, 0, mattress_width, mattress_width, 0],
+        z=[mattress_height, mattress_height, mattress_height, mattress_height, mattress_height],
+        color='lightblue',
+        opacity=0.6,
+        name='Mattress Top'
+    ))
     
     # Draw the mattress outline
     fig.add_shape(
@@ -196,20 +220,37 @@ with col1:
         # Set color based on sensor status
         color = get_sensor_status_color(sensor.status)
         
-        # Add sensor as a circle
-        fig.add_trace(go.Scatter(
+        # Add sensor as 3D marker with real-time data
+        mqtt_value = None
+        if selected_mattress_id == "MAT-101" and 'mqtt_integration' in st.session_state:
+            mqtt_integration = st.session_state['mqtt_integration']
+            if mqtt_integration and mqtt_integration.connected:
+                mqtt_data = mqtt_integration.get_latest_data(sensor.id)
+                if mqtt_data:
+                    mqtt_value = mqtt_data.get('value')
+
+        # Dynamic size based on sensor value
+        marker_size = 15
+        if mqtt_value is not None:
+            marker_size = 15 + min(mqtt_value/10, 15)  # Scale marker size with value
+
+        fig.add_trace(go.Scatter3d(
             x=[pos[0]], 
-            y=[pos[1]], 
-            mode='markers',
+            y=[pos[1]],
+            z=[mattress_height + 5],  # Place slightly above mattress
+            mode='markers+text',
             marker=dict(
-                size=15,
+                size=marker_size,
                 color=color,
+                symbol='circle',
                 line=dict(
                     color='white',
                     width=1
                 )
             ),
-            text=f"{sensor.name} ({sensor.type})<br>Status: {sensor.status.upper()}<br>Power: Connected",
+            text=[f"{sensor.name}"],
+            textposition="top center",
+            hovertext=f"{sensor.name} ({sensor.type})<br>Status: {sensor.status.upper()}<br>Value: {mqtt_value if mqtt_value is not None else 'N/A'}",
             hoverinfo='text',
             name=sensor.name
         ))

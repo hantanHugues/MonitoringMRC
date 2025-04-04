@@ -81,13 +81,18 @@ else:  # By Mattress
     # Filter sensors by selected mattress
     filtered_sensors = sensors_data[sensors_data['mattress_id'] == selected_mattress_id]
 
-    # Afficher tous les capteurs du matelas
-    if not filtered_sensors.empty:
-        st.sidebar.success(f"{len(filtered_sensors)} capteurs trouvés pour ce matelas")
-        
-        # Créer des tabs pour chaque type de capteur
-        sensor_types = filtered_sensors['type'].unique()
-        tabs = st.tabs([type.capitalize() for type in sensor_types])
+    # Create a dropdown for the filtered sensors
+    sensor_options = {s.id: f"{s.name} ({s.type})" for s in filtered_sensors.itertuples()}
+
+    if sensor_options:
+        selected_sensor_id = st.sidebar.selectbox(
+            tr("select_sensor_prompt"),
+            options=list(sensor_options.keys()),
+            format_func=lambda x: sensor_options[x]
+        )
+    else:
+        st.sidebar.warning(f"No sensors assigned to this mattress.")
+        st.stop()
         
         for tab, sensor_type in zip(tabs, sensor_types):
             with tab:

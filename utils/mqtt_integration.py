@@ -171,13 +171,16 @@ class MQTTIntegration:
                 }
                 mattress_id = mattress_map.get(uid, "MAT-101")  # Default to MAT-101
 
-            sensor_id = get_sensor_id(sensor_type, mattress_id)
-            if sensor_id is None:
-              return
+                sensor_id = get_sensor_id(sensor_type, mattress_id)
+                if sensor_id is None:
+                    return
 
-            if value is None:
+                if value is None:
                     self.logger.warning(f"Payload incomplet: {payload}")
                     return
+            except Exception as e:
+                self.logger.error(f"Erreur lors du traitement du message: {e}")
+                return
 
                 # Définir les unités selon le type de capteur
                 units = {

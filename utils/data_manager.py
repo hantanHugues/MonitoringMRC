@@ -278,6 +278,29 @@ def get_sensor_types():
     """
     return ['pressure', 'temperature', 'humidity', 'movement']
 
+# Stockage temporaire des données MQTT
+mqtt_data_store = {
+    'sensors': {},
+    'last_update': None
+}
+
+def update_mqtt_data(sensor_id, value, timestamp, unit):
+    """Mettre à jour le stockage temporaire avec les nouvelles données MQTT"""
+    if sensor_id not in mqtt_data_store['sensors']:
+        mqtt_data_store['sensors'][sensor_id] = []
+    
+    mqtt_data_store['sensors'][sensor_id].append({
+        'value': value,
+        'timestamp': timestamp,
+        'unit': unit
+    })
+    
+    # Garder seulement les 100 dernières valeurs
+    if len(mqtt_data_store['sensors'][sensor_id]) > 100:
+        mqtt_data_store['sensors'][sensor_id] = mqtt_data_store['sensors'][sensor_id][-100:]
+    
+    mqtt_data_store['last_update'] = timestamp
+
 def get_sensor_readings(sensor_id, sensor_type, timeframe='day'):
     """
     Get sensor readings for a specific sensor, using MQTT data when available

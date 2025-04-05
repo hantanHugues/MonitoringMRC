@@ -13,6 +13,15 @@ st.set_page_config(page_title="Détails des Capteurs", page_icon="📊", layout=
 sensors_data = get_sensors_data()
 mattresses_data = get_mattresses_data()
 
+# Rafraîchissement automatique
+if 'last_refresh' not in st.session_state:
+    st.session_state.last_refresh = time.time()
+
+# Rafraîchir toutes les 5 secondes
+if time.time() - st.session_state.last_refresh > 5:
+    st.session_state.last_refresh = time.time()
+    st.rerun()
+
 # Définition des types de capteurs et leurs unités
 sensor_types = [
     ('temperature', 'Capteur de température', '°C'),

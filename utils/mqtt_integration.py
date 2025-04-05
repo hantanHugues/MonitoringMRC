@@ -126,6 +126,7 @@ class MQTTIntegration:
         """
         Callback appelé lorsqu'un message est reçu du broker
         """
+        from utils.data_manager import update_mqtt_data
         try:
             # Afficher le message reçu pour le débogage
             self.logger.info(f"Message reçu sur le topic {msg.topic}")

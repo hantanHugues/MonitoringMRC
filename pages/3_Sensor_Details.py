@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -11,6 +12,15 @@ st.set_page_config(page_title="Détails des Capteurs", page_icon="📊", layout=
 # Obtention des données
 sensors_data = get_sensors_data()
 mattresses_data = get_mattresses_data()
+
+# Définition des types de capteurs et leurs unités
+sensor_types = [
+    ('temperature', 'Capteur de température', '°C'),
+    ('humidity', 'Capteur d\'humidité', '%'),
+    ('debit_urinaire', 'Débit urinaire', 'ml/h'),
+    ('poul', 'Pouls', 'bpm'),
+    ('creatine', 'Créatinine', 'mg/dL')
+]
 
 # Sidebar pour la sélection
 with st.sidebar:
@@ -26,10 +36,7 @@ with st.sidebar:
 
     # Liste des capteurs pour le matelas sélectionné
     filtered_sensors = []
-    for sensor_type in [type[0] for type in sensor_types]:
-        sensor_info = next(t for t in sensor_types if t[0] == sensor_type)
-        name = sensor_info[1]
-        unit = sensor_info[2]
+    for sensor_type, name, unit in sensor_types:
         filtered_sensors.append({
             'id': f"SEN-{201 + len(filtered_sensors)}",
             'name': name,

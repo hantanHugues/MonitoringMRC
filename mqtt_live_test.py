@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python3
 import paho.mqtt.client as mqtt
 import random
@@ -9,7 +10,7 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Configuration MQTT
-broker = "localhost"  # Adresse du broker local
+broker = "0.0.0.0"
 port = 1883
 
 # Topics MQTT
@@ -43,15 +44,14 @@ def generate_data(sensor_type):
         logging.error(f"Type de capteur inconnu: {sensor_type}")
         return None
 
-
-def on_connect(client, userdata, flags, rc):
+def on_connect(client, userdata, flags, rc, properties=None):
     if rc == 0:
-        logging.info(f"Connecté au broker avec le code {rc}")
+        logging.info("Connecté au broker MQTT")
     else:
         logging.error(f"Échec de connexion au broker MQTT, code de retour: {rc}")
 
 def main():
-    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, protocol=mqtt.MQTTv5)  # Utiliser MQTT v5
+    client = mqtt.Client(protocol=mqtt.MQTTv5)
     client.on_connect = on_connect
 
     try:
@@ -71,11 +71,11 @@ def main():
                             "sensor_type": sensor_type
                         }
 
-                        result = client.publish(topic, json.dumps(message), qos=0, retain=False)
+                        result = client.publish(topic, json.dumps(message), qos=0)
                         if result.rc == mqtt.MQTT_ERR_SUCCESS:
                             logging.info(f"Publié sur {topic}: {message}")
                         else:
-                            logging.error(f"Échec de publication sur {topic}, code d'erreur: {result.rc}")
+                            logging.error(f"Échec de publication sur {topic}")
 
             time.sleep(2)
 
@@ -87,7 +87,6 @@ def main():
         logging.error(f"Erreur: {e}")
     finally:
         logging.info("Test MQTT terminé")
-
 
 if __name__ == "__main__":
     main()

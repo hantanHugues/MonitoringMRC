@@ -9,7 +9,7 @@ deploymentTarget = "autoscale"
 run = ["sh", "-c", "run dev"]
 
 [workflows]
-runButton = "Medical Monitor"
+runButton = "Monitor System"
 
 [[workflows.workflow]]
 name = "Project"
@@ -126,6 +126,23 @@ args = "python mqtt_live_test.py -i 2"
 
 [[workflows.workflow]]
 name = "Medical Monitor"
+author = 41159537
+mode = "parallel"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "mosquitto -c mosquitto.conf"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python mqtt_live_test.py -i 2"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "streamlit run app.py --server.address 0.0.0.0 --server.port 5000"
+
+[[workflows.workflow]]
+name = "Monitor System"
 author = 41159537
 mode = "parallel"
 

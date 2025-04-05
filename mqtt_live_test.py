@@ -52,7 +52,10 @@ def on_connect(client, userdata, flags, rc, properties=None):
 def main():
     # Configuration du client avec ID unique et protocole v3.1.1
     client_id = f"sensor_publisher_{int(time.time())}"
-    client = mqtt.Client(client_id=client_id, protocol=mqtt.MQTTv311, clean_session=True)
+    client = mqtt.Client(
+        client_id=client_id,
+        clean_session=True
+    )
     client.on_connect = on_connect
 
     # Ajout de la gestion des erreurs de connexion

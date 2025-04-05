@@ -139,6 +139,24 @@ class MQTTIntegration:
 
             sensor_type = self.topic_type_map[topic]
 
+            # Map des topics vers les types de capteurs
+            self.topic_type_map = {
+                "capteur/temperature": "temperature",
+                "capteur/humidite": "humidity",
+                "capteur/debit_urinaire": "debit",
+                "capteur/poul": "poul",
+                "capteur/creatine": "creatine"
+            }
+
+            # Map des types de capteurs pour la compatibilité
+            self.sensor_type_map = {
+                "temperature": "temperature",
+                "humidity": "humidity",
+                "debit": "flow",
+                "poul": "pulse",
+                "creatine": "creatinine"
+            }
+
             # Map des types de capteurs aux IDs par matelas
             def get_sensor_id(sensor_type, mattress_id):
                 base_ids = {

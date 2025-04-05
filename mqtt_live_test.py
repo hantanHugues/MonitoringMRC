@@ -50,12 +50,9 @@ def on_connect(client, userdata, flags, rc, properties=None):
         logging.error(f"Échec de connexion au broker MQTT, code de retour: {rc}")
 
 def main():
-    # Configuration du client MQTT avec version compatible
-    client = mqtt.Client(
-        client_id=f"sensor_publisher_{int(time.time())}", 
-        protocol=mqtt.MQTTv311,
-        clean_session=True
-    )
+    # Configuration du client avec ID unique et protocole v3.1.1
+    client_id = f"sensor_publisher_{int(time.time())}"
+    client = mqtt.Client(client_id=client_id, protocol=mqtt.MQTTv311, clean_session=True)
     client.on_connect = on_connect
 
     # Ajout de la gestion des erreurs de connexion

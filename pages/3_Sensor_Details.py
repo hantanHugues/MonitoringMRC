@@ -26,13 +26,10 @@ with st.sidebar:
 
     # Liste des capteurs pour le matelas sélectionné
     filtered_sensors = []
-    for sensor_type, name, unit in [
-        ('temperature', 'Capteur de température', '°C'),
-        ('humidity', 'Capteur d\'humidité', '%'),
-        ('debit_urinaire', 'Débit urinaire', 'ml/h'),
-        ('poul', 'Pouls', 'bpm'),
-        ('creatine', 'Créatinine', 'mg/dL')
-    ]:
+    for sensor_type in [type[0] for type in sensor_types]:
+        sensor_info = next(t for t in sensor_types if t[0] == sensor_type)
+        name = sensor_info[1]
+        unit = sensor_info[2]
         filtered_sensors.append({
             'id': f"SEN-{201 + len(filtered_sensors)}",
             'name': name,

@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 import paho.mqtt.client as mqtt
 import random
@@ -51,10 +50,20 @@ def on_connect(client, userdata, flags, rc, properties=None):
         logging.error(f"Échec de connexion au broker MQTT, code de retour: {rc}")
 
 def main():
-    client = mqtt.Client(protocol=mqtt.MQTTv5)
+    # Configuration du client MQTT avec version compatible
+    client = mqtt.Client(
+        client_id=f"sensor_publisher_{int(time.time())}", 
+        protocol=mqtt.MQTTv311,
+        clean_session=True
+    )
     client.on_connect = on_connect
 
+    # Ajout de la gestion des erreurs de connexion
+    client.on_disconnect = lambda client, userdata, rc: logging.error(f"Déconnexion avec code {rc}")
+
     try:
+        # Tentatives de reconnexion automatique
+        client.reconnect_delay_set(min_delay=1, max_delay=30)
         logging.info(f"Tentative de connexion au broker MQTT à {broker}:{port}...")
         client.connect(broker, port, 60)
         client.loop_start()

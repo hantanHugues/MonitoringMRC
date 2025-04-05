@@ -30,6 +30,16 @@ if 'mqtt_client' not in st.session_state:
     st.session_state['mqtt_client'] = None
 if 'last_update' not in st.session_state:
     st.session_state['last_update'] = datetime.now()
+if 'auto_refresh' not in st.session_state:
+    st.session_state['auto_refresh'] = True
+if 'refresh_interval' not in st.session_state:
+    st.session_state['refresh_interval'] = 2
+
+# Force regular page updates
+if st.session_state.auto_refresh:
+    st.empty().markdown(f"<p style='display:none'>{time.time()}</p>", unsafe_allow_html=True)
+    time.sleep(st.session_state.refresh_interval)
+    st.rerun()
 
 # Initialize direct simulator for simulating sensor data
 # This will be used to get sensor data for mattress 1 (MAT-101)

@@ -2,6 +2,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import time
 from datetime import datetime, timedelta
 from utils.sensor_utils import generate_sample_data
 from utils.data_manager import get_sensors_data, get_mattresses_data

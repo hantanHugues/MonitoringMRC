@@ -29,7 +29,9 @@ with st.sidebar:
     for sensor_type, name, unit in [
         ('temperature', 'Capteur de température', '°C'),
         ('humidity', 'Capteur d\'humidité', '%'),
-        ('pressure', 'Capteur de pression', 'mmHg')
+        ('debit_urinaire', 'Débit urinaire', 'ml/h'),
+        ('poul', 'Pouls', 'bpm'),
+        ('creatine', 'Créatinine', 'mg/dL')
     ]:
         filtered_sensors.append({
             'id': f"SEN-{201 + len(filtered_sensors)}",

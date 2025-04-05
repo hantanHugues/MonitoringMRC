@@ -12,8 +12,14 @@ def get_sensors_data():
     For sensors on mattress 1 (MAT-101), data is sourced from MQTT broker when available
     For other mattresses, data is simulated
     """
-    # Sensor types
-    sensor_types = ['temperature', 'humidity', 'debit_urinaire', 'poul', 'creatine']
+    # Sensor types avec leurs unités et noms
+    sensor_types = [
+        ('temperature', 'Capteur de température', '°C'),
+        ('humidity', 'Capteur d\'humidité', '%'),
+        ('debit_urinaire', 'Débit urinaire', 'ml/h'),
+        ('poul', 'Pouls', 'bpm'),
+        ('creatine', 'Créatinine', 'mg/dL')
+    ]
     
     # Status options
     status_options = ['active', 'inactive', 'maintenance', 'error']

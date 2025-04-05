@@ -70,13 +70,21 @@ selected_sensor = filtered_sensors[filtered_sensors['id'] == selected_sensor_id]
 st.title(f"📊 {selected_sensor['name']}")
 st.markdown("Monitoring en temps réel des données du capteur")
 
-# Génération des données exemple
-historical_data = generate_sample_data(
-    start_time=datetime.now() - timedelta(hours=1),
-    end_time=datetime.now(),
-    interval_seconds=60,
-    sensor_type=selected_sensor['type']
-)
+# Récupération des données MQTT
+if 'mqtt_integration' in st.session_state and st.session_state['mqtt_integration'].connected:
+    mqtt_data = st.session_state['mqtt_integration'].get_latest_data(selected_sensor_id, history=True)
+    if mqtt_data and isinstance(mqtt_data, list):
+        historical_data = pd.DataFrame([
+            {
+                'timestamp': datetime.strptime(entry['timestamp'], "%Y-%m-%d %H:%M:%S"),
+                'value': entry['value']
+            }
+            for entry in mqtt_data
+        ]).sort_values('timestamp')
+    else:
+        historical_data = pd.DataFrame({'timestamp': [], 'value': []})
+else:
+    historical_data = pd.DataFrame({'timestamp': [], 'value': []})
 
 # Layout principal
 col1, col2 = st.columns([2, 1])
@@ -108,12 +116,16 @@ with col1:
 with col2:
     # Statistiques actuelles
     st.subheader("📊 Statistiques")
-    current_value = historical_data['value'].iloc[-1]
-    avg_value = historical_data['value'].mean()
-    max_value = historical_data['value'].max()
-    min_value = historical_data['value'].min()
+    
+    if not historical_data.empty:
+        current_value = historical_data['value'].iloc[-1]
+        avg_value = historical_data['value'].mean()
+        max_value = historical_data['value'].max()
+        min_value = historical_data['value'].min()
 
-    st.metric("Valeur actuelle", f"{current_value:.1f} {selected_sensor['unit']}")
-    st.metric("Moyenne", f"{avg_value:.1f} {selected_sensor['unit']}")
-    st.metric("Maximum", f"{max_value:.1f} {selected_sensor['unit']}")
-    st.metric("Minimum", f"{min_value:.1f} {selected_sensor['unit']}")
+        st.metric("Valeur actuelle", f"{current_value:.1f} {selected_sensor['unit']}")
+        st.metric("Moyenne", f"{avg_value:.1f} {selected_sensor['unit']}")
+        st.metric("Maximum", f"{max_value:.1f} {selected_sensor['unit']}")
+        st.metric("Minimum", f"{min_value:.1f} {selected_sensor['unit']}")
+    else:
+        st.info("En attente de données...")

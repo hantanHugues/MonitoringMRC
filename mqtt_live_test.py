@@ -51,7 +51,7 @@ def on_connect(client, userdata, flags, rc):
         logging.error(f"Échec de connexion au broker MQTT, code de retour: {rc}")
 
 def main():
-    client = mqtt.Client()
+    client = mqtt.Client(protocol=mqtt.MQTTv311)  # Spécifier la version du protocole
     client.on_connect = on_connect
 
     try:

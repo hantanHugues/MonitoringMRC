@@ -9,7 +9,7 @@ deploymentTarget = "autoscale"
 run = ["sh", "-c", "run dev"]
 
 [workflows]
-runButton = "Project"
+runButton = "MQTT Monitor"
 
 [[workflows.workflow]]
 name = "Project"
@@ -101,6 +101,24 @@ args = "streamlit run app.py --server.port 5000"
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "mosquitto -c mosquitto.conf"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python mqtt_live_test.py -i 2"
+
+[[workflows.workflow]]
+name = "MQTT Monitor"
+author = 41159537
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "streamlit run app.py --server.address 0.0.0.0 --server.port 5000"
+
+[[workflows.workflow]]
+name = "MQTT Data Simulator"
+author = 41159537
+mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"

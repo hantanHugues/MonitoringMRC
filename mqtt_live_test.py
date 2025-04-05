@@ -50,16 +50,16 @@ def on_connect(client, userdata, flags, rc, properties=None):
         logging.error(f"Échec de connexion au broker MQTT, code de retour: {rc}")
 
 def main():
-    # Configuration du client avec ID unique et protocole v3.1.1
+    # Configuration du client avec ID unique
     client_id = f"sensor_publisher_{int(time.time())}"
-    client = mqtt.Client(
-        client_id=client_id,
-        clean_session=True
-    )
+    client = mqtt.Client(client_id=client_id)
+    
+    # Configurer les callbacks
     client.on_connect = on_connect
-
-    # Ajout de la gestion des erreurs de connexion
     client.on_disconnect = lambda client, userdata, rc: logging.error(f"Déconnexion avec code {rc}")
+    
+    # Configurer les paramètres de reconnexion
+    client.reconnect_delay_set(min_delay=1, max_delay=60)
 
     try:
         # Tentatives de reconnexion automatique

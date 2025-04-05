@@ -30,10 +30,8 @@ class MQTTIntegration:
         self.username = username
         self.password = password
         self.client_id = f"medimat_integration_{int(time.time())}"
-        self.client = mqtt.Client(
-            client_id=self.client_id,
-            clean_session=True
-        )
+        self.client = mqtt.Client(client_id=self.client_id)
+        self.client.reconnect_delay_set(min_delay=1, max_delay=60)
         self.connected = False
         self.latest_data = {}
 
